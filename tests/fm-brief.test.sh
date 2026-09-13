@@ -801,9 +801,10 @@ test_pause_verb_override_renders_all_brief_scaffolds() {
 # Regression for the backgrounded-wait wedge (three stalls of 13-30 minutes on
 # 2026-09-12/13): a worker started a wait as a background job and ended its
 # turn expecting to be woken, but nothing wakes it. Rule 8 covers the mechanics
-# of a short in-turn wait; it must render in both the ship and scout scaffolds
-# (the wedge is not specific to either) and must reference rule 4's pause verb
-# rather than restating it (one-owner rule).
+# of a wait; it must render in both the ship and scout scaffolds (the wedge is
+# not specific to either), must send a worker to what is already readable
+# first, and must keep the poll-from-this-turn shape the no-mistakes Definition
+# of done mandates rather than prescribing one blocking foreground hold.
 test_backgrounded_wait_rule_renders_ship_and_scout() {
   local home kind id brief
   home="$TMP_ROOT/wait-rule-home"
@@ -820,12 +821,14 @@ test_backgrounded_wait_rule_renders_ship_and_scout() {
         ;;
     esac
     brief="$home/data/$id/brief.md"
-    assert_grep '8. When you must wait, do the waiting inside one foreground command that both waits and returns' "$brief" \
+    assert_grep '8. Before you wait, check what you can already read' "$brief" \
       "$kind brief did not render the backgrounded-wait rule as rule 8"
-    assert_grep 'never end a turn expecting a background job to wake you' "$brief" \
+    assert_grep 'Never end the turn expecting a background job to wake you' "$brief" \
       "$kind brief did not warn against ending a turn on a backgrounded wait"
-    assert_grep "rule 4's \`paused\` is for" "$brief" \
-      "$kind brief did not point the wait rule's long-wait exception back at rule 4's pause verb"
+    assert_grep 'poll it from this turn rather' "$brief" \
+      "$kind brief did not keep the poll-from-this-turn wait shape"
+    assert_no_grep 'do the waiting inside one foreground command' "$brief" \
+      "$kind brief prescribes a blocking foreground hold, contradicting the background-and-poll guidance"
   done
   pass "fm-brief.sh: the backgrounded-wait rule renders in the ship and scout scaffolds"
 }

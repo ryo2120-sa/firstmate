@@ -410,9 +410,10 @@ The report is the only thing that survives, so anything worth keeping must be in
    going. A drive-call error, timeout, slow read, or generic unreachability is NOT a daemon error:
    the daemon accepts \`respond\` immediately and runs the round in the background, so a killed or
    timed-out call was only waiting for a read while the run kept working.
-8. When you must wait, do the waiting inside one foreground command that both waits and returns
-   the result - never end a turn expecting a background job to wake you; nothing will. If the wait
-   is too long for that, that is what rule 4's \`$PAUSED_VERB\` is for.
+8. Before you wait, check what you can already read - the log, file, or state that would answer
+   you - and wait only for what is not there yet. When you do wait, poll it from this turn rather
+   than sitting in one long blocking hold your harness will kill.
+   Never end the turn expecting a background job to wake you; nothing will.
 
 $INBOX_SECTION
 
@@ -504,9 +505,10 @@ $ASK_USER_BLOCK
    going. A drive-call error, timeout, slow read, or generic unreachability is NOT a daemon error:
    the daemon accepts \`respond\` immediately and runs the round in the background, so a killed or
    timed-out call was only waiting for a read while the run kept working.
-8. When you must wait, do the waiting inside one foreground command that both waits and returns
-   the result - never end a turn expecting a background job to wake you; nothing will. If the wait
-   is too long for that, that is what rule 4's \`$PAUSED_VERB\` is for.
+8. Before you wait, check what you can already read - the log, file, or state that would answer
+   you - and wait only for what is not there yet. When you do wait, poll it from this turn rather
+   than sitting in one long blocking hold your harness will kill.
+   Never end the turn expecting a background job to wake you; nothing will.
 
 $INBOX_SECTION
 
