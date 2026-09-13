@@ -1,0 +1,13 @@
+# Regression check: the new case fails on the base script and passes on the target
+
+## Base bin/fm-brief.sh (ecfe071) + target tests (copy at /tmp/fmbrief-base)
+ok - fm-brief.sh: custom pause verb renders in every scaffold
+not ok - ship brief did not render the backgrounded-wait rule as rule 8
+
+## Target worktree (a75132e)
+ok - fm-brief.sh: custom pause verb renders in every scaffold
+ok - fm-brief.sh: the backgrounded-wait rule renders in the ship and scout scaffolds
+
+## Target suite with an ambient FM_CLASSIFY_PAUSED_VERB=awaiting exported
+ok - fm-brief.sh: custom pause verb renders in every scaffold
+ok - fm-brief.sh: the backgrounded-wait rule renders in the ship and scout scaffolds
