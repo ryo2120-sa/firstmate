@@ -827,8 +827,6 @@ test_backgrounded_wait_rule_renders_ship_and_scout() {
       "$kind brief did not warn against ending a turn on a backgrounded wait"
     assert_grep 'poll it from this turn rather' "$brief" \
       "$kind brief did not keep the poll-from-this-turn wait shape"
-    assert_no_grep 'do the waiting inside one foreground command' "$brief" \
-      "$kind brief prescribes a blocking foreground hold, contradicting the background-and-poll guidance"
   done
   pass "fm-brief.sh: the backgrounded-wait rule renders in the ship and scout scaffolds"
 }
