@@ -799,12 +799,12 @@ test_pause_verb_override_renders_all_brief_scaffolds() {
 }
 
 # Regression for the backgrounded-wait wedge (three stalls of 13-30 minutes on
-# 2026-09-12/13): a worker started a wait as a background job and ended its
-# turn expecting to be woken, but nothing wakes it. Rule 8 covers the mechanics
-# of a wait; it must render in both the ship and scout scaffolds (the wedge is
-# not specific to either), must send a worker to what is already readable
-# first, and must keep the poll-from-this-turn shape the no-mistakes Definition
-# of done mandates rather than prescribing one blocking foreground hold.
+# 2026-09-12/13): each worker spent a long wait on evidence already written to
+# disk. Rule 8 sends a worker to what it already has before it waits at all,
+# and must render in both the ship and scout scaffolds (the wedge is not
+# specific to either). It deliberately says nothing about what a harness will
+# do with a background job - rule 4 owns a declared external wait, and the
+# no-mistakes Definition of done owns the pipeline drive call.
 test_backgrounded_wait_rule_renders_ship_and_scout() {
   local home kind id brief
   home="$TMP_ROOT/wait-rule-home"
@@ -821,12 +821,10 @@ test_backgrounded_wait_rule_renders_ship_and_scout() {
         ;;
     esac
     brief="$home/data/$id/brief.md"
-    assert_grep '8. Before you wait, check what you can already read' "$brief" \
+    assert_grep '8. Before you wait on anything, check what you already have' "$brief" \
       "$kind brief did not render the backgrounded-wait rule as rule 8"
-    assert_grep 'Never end the turn expecting a background job to wake you' "$brief" \
-      "$kind brief did not warn against ending a turn on a backgrounded wait"
-    assert_grep 'poll it from this turn rather' "$brief" \
-      "$kind brief did not keep the poll-from-this-turn wait shape"
+    assert_grep 'Most waits are for evidence that is already written.' "$brief" \
+      "$kind brief did not give the reason a worker should read before it waits"
   done
   pass "fm-brief.sh: the backgrounded-wait rule renders in the ship and scout scaffolds"
 }
