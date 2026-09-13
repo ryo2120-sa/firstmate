@@ -798,6 +798,38 @@ test_pause_verb_override_renders_all_brief_scaffolds() {
   pass "fm-brief.sh: custom pause verb renders in every scaffold"
 }
 
+# Regression for the backgrounded-wait wedge (three stalls of 13-30 minutes on
+# 2026-09-12/13): a worker started a wait as a background job and ended its
+# turn expecting to be woken, but nothing wakes it. Rule 8 covers the mechanics
+# of a short in-turn wait; it must render in both the ship and scout scaffolds
+# (the wedge is not specific to either) and must reference rule 4's pause verb
+# rather than restating it (one-owner rule).
+test_backgrounded_wait_rule_renders_ship_and_scout() {
+  local home kind id brief
+  home="$TMP_ROOT/wait-rule-home"
+  mkdir -p "$home/data"
+
+  for kind in ship scout; do
+    id="brief-wait-rule-$kind"
+    case "$kind" in
+      ship)
+        FM_HOME="$home" "$ROOT/bin/fm-brief.sh" "$id" firstmate --mode no-mistakes >/dev/null 2>&1
+        ;;
+      scout)
+        FM_HOME="$home" "$ROOT/bin/fm-brief.sh" "$id" firstmate --scout >/dev/null 2>&1
+        ;;
+    esac
+    brief="$home/data/$id/brief.md"
+    assert_grep '8. When you must wait, do the waiting inside one foreground command that both waits and returns' "$brief" \
+      "$kind brief did not render the backgrounded-wait rule as rule 8"
+    assert_grep 'never end a turn expecting a background job to wake you' "$brief" \
+      "$kind brief did not warn against ending a turn on a backgrounded wait"
+    assert_grep "rule 4's \`paused\` is for" "$brief" \
+      "$kind brief did not point the wait rule's long-wait exception back at rule 4's pause verb"
+  done
+  pass "fm-brief.sh: the backgrounded-wait rule renders in the ship and scout scaffolds"
+}
+
 test_scout_and_secondmate_load_decision_hold_policy() {
   local home scout charter
   home="$TMP_ROOT/decision-policy-home"
@@ -922,6 +954,7 @@ test_secondmate_no_projects_charter
 test_secondmate_marked_request_reporting_contract
 test_secondmate_directory_paths_are_absolute_and_output_is_stable
 test_pause_verb_override_renders_all_brief_scaffolds
+test_backgrounded_wait_rule_renders_ship_and_scout
 test_scout_and_secondmate_load_decision_hold_policy
 test_scout_and_secondmate_scaffold
 test_scout_lavish_line_follows_presentation_floor
