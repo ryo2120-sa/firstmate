@@ -142,9 +142,10 @@
 #   a failed or inconclusive probe omits it so older Pi versions remain launchable.
 #   A missing selected executable refuses before endpoint creation, and pi-signed
 #   never falls back to pi. Every Firstmate-launched pi or pi-signed worker,
-#   including secondmates and relaunches, receives
-#   PI_CLAUDE_CODE_PROVIDER_IDLE_TIMEOUT_MS=1800000 so an ambient lower value
-#   cannot shorten the approved 30-minute Claude provider idle limit.
+#   including secondmates and relaunches, is pinned to
+#   PI_CLAUDE_CODE_PROVIDER_IDLE_TIMEOUT_MS=1800000, replacing any ambient value
+#   in either direction, so the approved 30-minute Claude provider idle limit is
+#   what every Firstmate-launched Pi actually runs with.
 #   For omp (Oh My Pi), fm-spawn resolves the `omp` executable from PATH once and
 #   refuses when it is absent. Every omp launch clears the foreign harness
 #   markers (omp publishes none of its own), sets the Firstmate-owned
