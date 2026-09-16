@@ -19,7 +19,8 @@ Native Codex sessions may request `ultra` through the native extension flag desc
 Pi has no permission system, so workers are always autonomous.
 Pi's installed `packages/coding-agent/docs/settings.md` UI and display section documents `regular` as the `tuiMode` default and `fullscreen` as experimental.
 Fullscreen can bury steering messages by rewriting scrollback, so Firstmate avoids it when the installed CLI supports the override.
-`../../../bin/fm-spawn.sh --help` owns the executable-pinning and version-safe launch mechanics.
+A Pi session on a Claude provider stops itself after five minutes without protocol activity; `PI_CLAUDE_CODE_PROVIDER_IDLE_TIMEOUT_MS` sets that limit in milliseconds and every Firstmate-launched Pi is pinned to the approved 30-minute value.
+`../../../bin/fm-spawn.sh --help` owns the executable-pinning, idle-limit, and version-safe launch mechanics.
 
 Pi-signed is the signed wrapper identity verified on version 0.82.0.
 Firstmate records `pi-signed` without normalization and refuses rather than falling back to `pi` when that wrapper is unavailable.
