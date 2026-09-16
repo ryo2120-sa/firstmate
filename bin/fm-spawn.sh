@@ -142,7 +142,7 @@
 #   a failed or inconclusive probe omits it so older Pi versions remain launchable.
 #   A missing selected executable refuses before endpoint creation, and pi-signed
 #   never falls back to pi. Every Firstmate-launched pi or pi-signed worker,
-#   including secondmates and relaunches, is pinned to
+#   including secondmates, relaunches, and raw launch commands, is pinned to
 #   PI_CLAUDE_CODE_PROVIDER_IDLE_TIMEOUT_MS=1800000, replacing any ambient value
 #   in either direction, so the approved 30-minute Claude provider idle limit is
 #   what every Firstmate-launched Pi actually runs with.
@@ -1567,7 +1567,7 @@ launch_template() {
       ;;
     opencode) printf '%s' 'OPENCODE_CONFIG_CONTENT='\''{"permission":{"*":"allow"}}'\'' opencode __MODELFLAG__--prompt "$(__OPINPUT__ encode launch-brief < __BRIEF__)"' ;;
     pi|pi-signed)
-      printf '%s' 'PI_CLAUDE_CODE_PROVIDER_IDLE_TIMEOUT_MS=1800000 __PIBIN____PITUIMODE__'
+      printf '%s' '__PIBIN____PITUIMODE__'
       if [ "$kind" = secondmate ]; then
         printf '%s' ' __MODELFLAG____EFFORTFLAG__-e __PITURNEND__ -e __PIWATCH__ "$(__OPINPUT__ encode launch-brief < __BRIEF__)"'
       else
@@ -1811,7 +1811,7 @@ case "$HARNESS" in
       PI_TUI_MODE=' --tui-mode regular'
     fi
     LAUNCH=${LAUNCH//__PITUIMODE__/$PI_TUI_MODE}
-    LAUNCH="FM_PI_HARNESS=$HARNESS $LAUNCH"
+    LAUNCH="FM_PI_HARNESS=$HARNESS PI_CLAUDE_CODE_PROVIDER_IDLE_TIMEOUT_MS=1800000 $LAUNCH"
     ;;
   cursor)
     # `cursor` is not the CLI name, and the legacy alias `agent` is far too

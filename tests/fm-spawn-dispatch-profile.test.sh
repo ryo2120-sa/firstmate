@@ -702,6 +702,29 @@ test_pi_family_launch_sets_fixed_idle_timeout() {
   pass "Pi and pi-signed workers and secondmates receive the fixed 30-minute Claude provider idle timeout"
 }
 
+test_raw_pi_launch_receives_fixed_idle_timeout() {
+  local rec id out status launch envlog
+  id=profile-pi-raw-idle-z8f
+  rec=$(make_spawn_case profile-pi-raw-idle pi "$id")
+  read_case_record "$rec"
+  envlog="$CASE_DIR/pi-env.log"
+
+  out=$(PI_CLAUDE_CODE_PROVIDER_IDLE_TIMEOUT_MS=300000 FM_FAKE_PI_ENV_LOG="$envlog" \
+    run_ship_spawn "$HOME_DIR" "$WT_DIR" "$FAKEBIN_DIR" "$LAUNCH_LOG" "$id" "$PROJ_DIR" \
+      'pi --tui-mode regular')
+  status=$?
+  expect_code 0 "$status" "raw pi launch should succeed: $out"
+  assert_meta_profile "$HOME_DIR/state/$id.meta" pi default default
+  launch=$(cat "$LAUNCH_LOG")
+  assert_contains "$launch" "pi --tui-mode regular" "raw pi launch command was rewritten"
+  PI_CLAUDE_CODE_PROVIDER_IDLE_TIMEOUT_MS=300000 FM_FAKE_PI_ENV_LOG="$envlog" \
+    PATH="$FAKEBIN_DIR:$PATH" bash -c "$launch" \
+    || fail "raw pi launch command failed"
+  [ "$(cat "$envlog")" = 1800000 ] \
+    || fail "raw pi launch did not force the 30-minute idle timeout: $(cat "$envlog")"
+  pass "the raw Pi launch escape hatch receives the fixed 30-minute Claude provider idle timeout"
+}
+
 test_pi_signed_threads_shared_pi_profile_and_preserves_identity() {
   local rec id out status launch
   id=profile-pi-signed-z8b
@@ -1359,6 +1382,7 @@ test_native_pi_ultra_is_explicit_and_model_scoped
 test_batch_preserves_native_ultra
 test_pi_threads_model_and_max_effort
 test_pi_family_launch_sets_fixed_idle_timeout
+test_raw_pi_launch_receives_fixed_idle_timeout
 test_pi_tui_mode_probe_is_safe_for_old_and_new_pi
 test_pi_signed_threads_shared_pi_profile_and_preserves_identity
 test_pi_signed_missing_binary_refuses_before_endpoint_or_metadata
