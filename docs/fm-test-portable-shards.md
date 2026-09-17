@@ -112,7 +112,10 @@ Portable shards, each portable serial shard, and the Herdr lane upload runner-ge
 |---|---|---|
 | portable parallel 1/2 | See [CI workflow](../.github/workflows/ci.yml) | The workflow owns the parallel cap rationale and its evidence limits. |
 | portable serial 1-5 | job `timeout-minutes: 30` | Current runners can take about 20 minutes; the 30-minute cap remains a hang tripwire while leaving margin for job setup and runner-speed spread. |
-| Herdr | family-run step `timeout-minutes: 20`; job `timeout-minutes: 75` backstop | Healthy runs finished around 7 minutes before this lane gained `fm-backend-herdr-focus-flash-e2e`, which measures about 2 minutes against a real lab locally, so the step bound is still the hang tripwire (cleanup and timing artifacts still upload) while the job cap stays a last-resort backstop. Refresh this figure from the lane's uploaded timing artifact. |
+| Herdr | family-run step `timeout-minutes: 20`; job `timeout-minutes: 75` backstop | Healthy runs finished around 7 minutes before this lane gained `fm-backend-herdr-focus-flash-e2e`, which measures about 2 minutes against a real lab locally, and before the presentation-lock acquire budget rose to about 70 seconds, which adds about 2 more minutes: two fixtures in `tests/fm-backend-herdr-presentation-e2e.test.sh` deliberately hold that lock until the contended spawn returns, so each one pays the full production wait by design to prove the flat fallback. Budget about 11 minutes healthy, so the step bound is still the hang tripwire (cleanup and timing artifacts still upload) while the job cap stays a last-resort backstop. Refresh this figure from the lane's uploaded timing artifact. |
+
+The same acquire budget applies on the spawn abort path inside the `EXIT` trap, so a failing or interrupted spawn can now take about 70 seconds to exit rather than about 5.
+That is a known, accepted residual of raising the budget and a candidate for separate follow-up work.
 
 Timeouts are intended as hang tripwires; a passing coverage guard does not establish a healthy job duration.
 `.github/workflows/ci.yml` owns the exact numbers.
