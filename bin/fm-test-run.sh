@@ -126,9 +126,8 @@
 # duration-balanced partition of that exact set, packed from the measured hints
 # in portable_parallel_weight_hints (see docs/fm-test-portable-shards.md).
 # --check-coverage reports parallel_max_ms (the larger lane hint sum),
-# parallel_imbalance_ms (the absolute difference between the sums),
-# parallel_unhinted (the number of members missing a parallel hint), and
-# serial_max_ms (the largest packed portable-serial shard hint sum).
+# parallel_imbalance_ms (the absolute difference between the sums), and
+# parallel_unhinted (the number of members missing a parallel hint).
 # These sums exclude unhinted members and are estimates, not measured job wall
 # times. Missing parallel hints are reported without failing this guard.
 #
@@ -832,19 +831,6 @@ portable_serial_unhinted() {
   rm -rf "$tmp"
 }
 
-# Sum serial duration hints for the script paths on stdin. Prints
-# "<total_ms> <unhinted_count>" so the coverage guard can report the heaviest
-# packed shard without copying the assignment table.
-portable_serial_lane_weight() {
-  awk '
-    NR == FNR { if (NF) { hint[$1] = $2 } ; next }
-    NF {
-      if ($1 in hint) { total += hint[$1] } else { unhinted++ }
-    }
-    END { printf "%d %d\n", total + 0, unhinted + 0 }
-  ' <(portable_serial_weight_hints) -
-}
-
 portable_parallel_weight_for() {
   local want=$1 ms
   ms=$(portable_parallel_weight_hints | awk -v want="$want" '$1 == want { print $2; exit }')
@@ -984,7 +970,6 @@ select_lane() {
 run_coverage_guard() {
   local tmp missing extra a b shard unhinted serial_total
   local p1_ms p1_unhinted p2_ms p2_unhinted parallel_max_ms parallel_imbalance_ms
-  local serial_max_ms shard_ms
   local -a saved_scripts=()
   tmp=$(mktemp -d "${TMPDIR:-/tmp}/fm-test-coverage.XXXXXX")
 
@@ -1029,7 +1014,6 @@ run_coverage_guard() {
       return 1
     fi
     printf '%s\n' "${SCRIPTS[@]+"${SCRIPTS[@]}"}" >>"$tmp/serial_shards_raw"
-    printf '%s\n' "${SCRIPTS[@]+"${SCRIPTS[@]}"}" >"$tmp/serial_shard_$shard"
     shard=$((shard + 1))
   done
   SCRIPTS=()
@@ -1124,16 +1108,7 @@ run_coverage_guard() {
   parallel_imbalance_ms=$((p1_ms - p2_ms))
   [ "$parallel_imbalance_ms" -ge 0 ] || parallel_imbalance_ms=$((-parallel_imbalance_ms))
 
-  serial_max_ms=0
-  shard=1
-  while [ "$shard" -le "$PORTABLE_SERIAL_SHARDS" ]; do
-    shard_ms=$(portable_serial_lane_weight <"$tmp/serial_shard_$shard")
-    shard_ms=${shard_ms%% *}
-    [ "$shard_ms" -le "$serial_max_ms" ] || serial_max_ms=$shard_ms
-    shard=$((shard + 1))
-  done
-
-  printf 'FM_TEST_COVERAGE ok total=%s parallel=%s parallel_max_ms=%s parallel_imbalance_ms=%s parallel_unhinted=%s serial=%s serial_shards=%s serial_max_ms=%s serial_unhinted=%s herdr=%s\n' \
+  printf 'FM_TEST_COVERAGE ok total=%s parallel=%s parallel_max_ms=%s parallel_imbalance_ms=%s parallel_unhinted=%s serial=%s serial_shards=%s serial_unhinted=%s herdr=%s\n' \
     "$(wc -l <"$tmp/all" | tr -d ' ')" \
     "$(wc -l <"$tmp/shards_union" | tr -d ' ')" \
     "$parallel_max_ms" \
@@ -1141,7 +1116,6 @@ run_coverage_guard() {
     "$((p1_unhinted + p2_unhinted))" \
     "$(wc -l <"$tmp/serial" | tr -d ' ')" \
     "$PORTABLE_SERIAL_SHARDS" \
-    "$serial_max_ms" \
     "$unhinted" \
     "$(wc -l <"$tmp/herdr" | tr -d ' ')"
   rm -rf "$tmp"

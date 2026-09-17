@@ -335,23 +335,20 @@ C_AFTER=$(focus_snapshot) || fail 'could not capture the Part C post-close focus
   || fail "the fallback close left focus off the anchor ($C_BEFORE -> $C_AFTER)"
 C_SAMPLE_COUNT=$(wc -l < "$C_FOCUS_SAMPLES" | tr -d ' ')
 C_WRONG=$(grep -Fvxc -- "$C_BEFORE" "$C_FOCUS_SAMPLES" || true)
-C_LAST_SAMPLE=$(tail -n 1 "$C_FOCUS_SAMPLES" 2>/dev/null || true)
 if [ "$STEAL_LIVE" = 1 ]; then
   # A defective release cannot make this path focus-safe, which is precisely why
   # default-on projection is floored above it. The sampler races the fallback
   # close, so whether it happens to LAND inside the transient wrong-focus
   # interval proves nothing about product behavior; requiring a witness makes
-  # the test flake whenever the sampler loses that race. What the product
-  # actually promises is bounded and restored, not observed: prove the sampler
-  # ran at all (liveness), and if it did observe a wrong-focus sample, prove
-  # that window ended restored to the anchor before this fallback returned.
+  # the test flake whenever the sampler loses that race. Likewise the last
+  # sample is whichever one the sampler happened to finish as the operation
+  # flag cleared, so it is not a restoration witness either. What the product
+  # actually promises is bounded and restored, and the restoration is already
+  # proven deterministically by C_AFTER above; all this sampler owes here is
+  # liveness, so require only that it ran.
   [ "$C_SAMPLE_COUNT" -ge 1 ] \
     || fail 'Part C focus sampler recorded no samples at all, so the harness proved nothing'
-  if [ "$C_WRONG" -ge 1 ]; then
-    [ "$C_LAST_SAMPLE" = "$C_BEFORE" ] \
-      || fail "the fallback close on a defective release left a wrong-focus sample unrestored at the end of the sampled window ($C_LAST_SAMPLE != $C_BEFORE)"
-  fi
-  pass "fallback on a defective release: sampler recorded $C_SAMPLE_COUNT samples, any wrong-focus window ($C_WRONG samples) ended restored to the anchor"
+  pass "fallback on a defective release: sampler recorded $C_SAMPLE_COUNT samples and the anchor was restored exactly after a wrong-focus window of $C_WRONG samples"
 else
   [ "$C_WRONG" -eq 0 ] \
     || fail "a focus-preserving release exposed $C_WRONG wrong-focus samples on the fallback path"
