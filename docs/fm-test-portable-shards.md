@@ -57,7 +57,9 @@ Each shard is still strictly serial in itself, and separate runners mean no two 
 `.github/workflows/ci.yml` derives the same `n` from `strategy.job-total` rather than a literal, so changing the shard count in either file without the other fails the lane loudly instead of leaving part of the required suite unrun.
 
 Assignment is longest-processing-time bin packing over per-script duration hints embedded in `bin/fm-test-run.sh`.
-The embedded hints include the slowest measurements retained from the `fm-test-timing-portable-serial-*` artifacts of three green CI runs on 2026-09-01, [33558082172](https://github.com/kunchenguid/firstmate/actions/runs/33558082172), [33523597838](https://github.com/kunchenguid/firstmate/actions/runs/33523597838), and [33463326167](https://github.com/kunchenguid/firstmate/actions/runs/33463326167), the completed-script measurements from [run 34342484144](https://github.com/kunchenguid/firstmate/actions/runs/34342484144), plus the 5121 ms native-Windows focused runner measurement for `tests/fm-pi-windows-shell-invocation.test.sh` from 2026-09-06T21:02Z.
+The embedded hints are `max(existing hint, measured)` per script, refreshed on 2026-09-17 from the `fm-test-timing-portable-serial-*` artifacts of the green CI run [34756223980](https://github.com/ryo2120-sa/firstmate/actions/runs/34756223980) (2026-09-13) layered over the prior table, so no script's hint was ever lowered even though 17 scripts had grown enough to overflow shard 5 against the 30-minute cap.
+The prior table traced to three green CI runs on 2026-09-01, [33558082172](https://github.com/kunchenguid/firstmate/actions/runs/33558082172), [33523597838](https://github.com/kunchenguid/firstmate/actions/runs/33523597838), and [33463326167](https://github.com/kunchenguid/firstmate/actions/runs/33463326167), the completed-script measurements from [run 34342484144](https://github.com/kunchenguid/firstmate/actions/runs/34342484144), plus the 5121 ms native-Windows focused runner measurement for `tests/fm-pi-windows-shell-invocation.test.sh` from 2026-09-06T21:02Z.
+The 2026-09-17 refresh preserved that native-Windows measurement via the `max()` rule, since portable CI shards skip that native-Windows-only script and so never remeasure it.
 Taking the slowest of several CI runs rather than a single run keeps the balance honest on a slow runner.
 A script with no hint gets the conservative `PORTABLE_SERIAL_DEFAULT_WEIGHT_MS` default.
 Hints only affect balance: the coverage guard keeps the partition complete and disjoint whatever they say, so a stale hint costs a slower shard rather than lost coverage.
@@ -69,7 +71,7 @@ Refresh the hints whenever the serial lane gains scripts, rather than waiting fo
 `bin/fm-test-run.sh` owns the per-shard packing, so its `--check-coverage` output is the current account of lane size, shard composition, and balance rather than a copied table.
 Run 34342484144 observed a shard reach about 20 minutes of passing work, so the 30-minute job cap keeps meaningful hang-tripwire margin for job setup and runner-speed spread.
 
-The single longest script, `tests/fm-watch-triage.test.sh` at 262626 ms, is the floor for any shard count.
+The single longest script, `tests/fm-watch-triage.test.sh` at 630058 ms, is the floor for any shard count.
 
 Refresh the CI-derived hints by downloading the per-shard timing artifacts from several green CI runs and replacing the `portable_serial_weight_hints` table in `bin/fm-test-run.sh` with the slowest measured `duration_ms` per `path`:
 
@@ -92,6 +94,7 @@ Measure native-Windows-only scripts through the focused Git Bash runner and reta
 It also verifies that the parallel lanes, portable serial lane, and real-Herdr family are disjoint and cover every `tests/*.test.sh` script.
 It separately verifies that the portable serial CI shards are non-empty, disjoint, and together equal the portable serial lane.
 It reports the unmeasured serial share as `serial_unhinted=` and refuses when that share exceeds `PORTABLE_SERIAL_MAX_UNHINTED_PERCENT`, so the shards stay balanced on evidence rather than on the default weight.
+It also reports `serial_max_ms` as the largest packed serial-shard hint sum, so a stale table that would overflow the 30-minute job cap is visible from `--check-coverage` without copying the shard composition here.
 
 ## Timing artifacts
 

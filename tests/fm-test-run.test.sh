@@ -1018,10 +1018,10 @@ test_list_scheduled_non_lane_selections_use_serial_weights() {
   done
   printf '%s\n' \
     tests/fm-muse-harness.test.sh \
+    tests/fm-kimi-harness.test.sh \
     tests/fm-brief.test.sh \
     tests/fm-captain-hold-lifecycle.test.sh \
     tests/fm-lint.test.sh \
-    tests/fm-kimi-harness.test.sh \
     tests/fm-operational-input.test.sh >"$tmp/expected"
   for selection in family all changed scripts; do
     case "$selection" in
@@ -1168,6 +1168,21 @@ test_portable_serial_hint_coverage_is_reported_and_bounded() {
   [ "$((unhinted * 100))" -le "$((serial * 15))" ] \
     || fail "$unhinted of $serial portable serial scripts lack a measured hint; refresh them"
   pass "coverage guard reports and bounds the unmeasured portable serial share"
+}
+
+test_portable_serial_shards_stay_packed_under_job_cap() {
+  local out max
+  # Packed hint sums are estimates, not measured wall times, but a partition
+  # whose heaviest shard already exceeds the 30-minute CI job cap will be
+  # cancelled before the last tests run. The coverage guard reports that
+  # estimate as serial_max_ms so stale weight hints fail here instead of in CI.
+  out=$("$RUNNER" --check-coverage)
+  max=$(printf '%s\n' "$out" | sed -n 's/.*serial_max_ms=\([0-9][0-9]*\).*/\1/p')
+  [ -n "$max" ] && [ "$max" -gt 0 ] \
+    || fail "coverage guard must report serial_max_ms: $out"
+  [ "$max" -lt 1800000 ] \
+    || fail "packed portable serial shard ${max}ms meets or exceeds the 30-minute job cap; refresh the weight hints without dropping tests or raising that cap"
+  pass "portable serial shards pack under the 30-minute job cap"
 }
 
 test_portable_serial_shard_lane_refusals() {
@@ -1713,6 +1728,7 @@ test_portable_shard_union_and_coverage_guard
 test_portable_parallel_lanes_stay_duration_balanced
 test_portable_serial_shards_partition_the_serial_lane
 test_portable_serial_hint_coverage_is_reported_and_bounded
+test_portable_serial_shards_stay_packed_under_job_cap
 test_portable_serial_shard_lane_refusals
 test_jobs_requires_proven_isolated
 test_jobs_admits_a_concurrent_safe_family
