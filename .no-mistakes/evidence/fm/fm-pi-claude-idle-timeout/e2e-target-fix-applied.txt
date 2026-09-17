@@ -1,0 +1,80 @@
+# fm-spawn Pi idle-timeout E2E - TARGET commit 6ce3beb (fix applied)
+# driver: pi-idle-timeout-e2e.sh; real bin/fm-spawn.sh, real git worktrees, tmux shim that executes the pane payload
+
+
+=== S1 pi crewmate (ambient PI_CLAUDE_CODE_PROVIDER_IDLE_TIMEOUT_MS=300000) ===
+warning: /tmp/fm-pi-idle-e2e/s1-pi/home/data/pd-desk-001/launch-brief.md records no delivery contract line (scaffolded before ship briefs recorded one); launching on the explicit --mode no-mistakes - confirm its definition of done matches
+spawned pd-desk-001 harness=pi kind=ship mode=no-mistakes yolo=off window=firstmate:fm-pd-desk-001 worktree=/tmp/fm-pi-idle-e2e/s1-pi/wt
+--- launch command sent to the pane ---
+env -u CURSOR_AGENT -u CURSOR_INVOKED_AS -u GEMINI_CLI FM_PI_HARNESS=pi PI_CLAUDE_CODE_PROVIDER_IDLE_TIMEOUT_MS=1800000 '/tmp/fm-pi-idle-e2e/s1-pi/bin/pi' --tui-mode regular -e '/tmp/fm-pi-idle-e2e/s1-pi/home/state/pd-desk-001.pi-ext.ts' "$('/Users/nguyenl8/.no-mistakes/worktrees/8642b6d0ddaf/01M2QGGJSE5NNYEPQ97N4GSXSA/bin/fm-operational-input.sh' encode launch-brief < '/tmp/fm-pi-idle-e2e/s1-pi/home/data/pd-desk-001/launch-brief.md')"
+--- environment observed by the launched worker process ---
+launched-binary: /tmp/fm-pi-idle-e2e/s1-pi/bin/pi
+FM_PI_HARNESS=pi
+PI_CLAUDE_CODE_PROVIDER_IDLE_TIMEOUT_MS=1800000
+PASS  S1 pi crewmate -> worker process saw PI_CLAUDE_CODE_PROVIDER_IDLE_TIMEOUT_MS=1800000
+
+=== S2 pi-signed crewmate (ambient 300000) ===
+warning: /tmp/fm-pi-idle-e2e/s2-pi-signed/home/data/pd-desk-002/launch-brief.md records no delivery contract line (scaffolded before ship briefs recorded one); launching on the explicit --mode no-mistakes - confirm its definition of done matches
+spawned pd-desk-002 harness=pi-signed kind=ship mode=no-mistakes yolo=off window=firstmate:fm-pd-desk-002 worktree=/tmp/fm-pi-idle-e2e/s2-pi-signed/wt
+--- environment observed by the launched worker process ---
+launched-binary: /tmp/fm-pi-idle-e2e/s2-pi-signed/bin/pi-signed
+FM_PI_HARNESS=pi-signed
+PI_CLAUDE_CODE_PROVIDER_IDLE_TIMEOUT_MS=1800000
+PASS  S2 pi-signed crewmate -> worker process saw PI_CLAUDE_CODE_PROVIDER_IDLE_TIMEOUT_MS=1800000
+
+=== S3 persistent pi secondmate (ambient 300000) ===
+warning: secondmate pd-desk-003 sync skipped before launch: primary default-branch commit cannot be resolved
+spawned pd-desk-003 harness=pi kind=secondmate mode=secondmate yolo=off window=firstmate:fm-pd-desk-003 worktree=/private/tmp/fm-pi-idle-e2e/s3-secondmate/secondmate-home
+--- environment observed by the launched secondmate process ---
+launched-binary: /tmp/fm-pi-idle-e2e/s3-secondmate/bin/pi
+FM_PI_HARNESS=pi
+PI_CLAUDE_CODE_PROVIDER_IDLE_TIMEOUT_MS=1800000
+PASS  S3 pi secondmate -> worker process saw PI_CLAUDE_CODE_PROVIDER_IDLE_TIMEOUT_MS=1800000
+
+=== S4 raw Pi launch escape hatch (ambient 300000) ===
+warning: /tmp/fm-pi-idle-e2e/s4-raw/home/data/pd-desk-004/launch-brief.md records no delivery contract line (scaffolded before ship briefs recorded one); launching on the explicit --mode no-mistakes - confirm its definition of done matches
+spawned pd-desk-004 harness=pi kind=ship mode=no-mistakes yolo=off window=firstmate:fm-pd-desk-004 worktree=/tmp/fm-pi-idle-e2e/s4-raw/wt
+--- launch command sent to the pane ---
+env -u CURSOR_AGENT -u CURSOR_INVOKED_AS -u GEMINI_CLI FM_PI_HARNESS=pi PI_CLAUDE_CODE_PROVIDER_IDLE_TIMEOUT_MS=1800000 pi --tui-mode regular
+--- environment observed by the launched worker process ---
+launched-binary: /tmp/fm-pi-idle-e2e/s4-raw/bin/pi
+FM_PI_HARNESS=pi
+PI_CLAUDE_CODE_PROVIDER_IDLE_TIMEOUT_MS=1800000
+PASS  S4 raw pi launch -> worker process saw PI_CLAUDE_CODE_PROVIDER_IDLE_TIMEOUT_MS=1800000
+
+=== S5 adversarial: ambient 3600000 must not win over the pinned 1800000 ===
+warning: /tmp/fm-pi-idle-e2e/s5-high/home/data/pd-desk-005/launch-brief.md records no delivery contract line (scaffolded before ship briefs recorded one); launching on the explicit --mode no-mistakes - confirm its definition of done matches
+spawned pd-desk-005 harness=pi kind=ship mode=no-mistakes yolo=off window=firstmate:fm-pd-desk-005 worktree=/tmp/fm-pi-idle-e2e/s5-high/wt
+--- environment observed by the launched worker process ---
+launched-binary: /tmp/fm-pi-idle-e2e/s5-high/bin/pi
+FM_PI_HARNESS=pi
+PI_CLAUDE_CODE_PROVIDER_IDLE_TIMEOUT_MS=1800000
+PASS  S5 ambient-higher pi crewmate -> worker process saw PI_CLAUDE_CODE_PROVIDER_IDLE_TIMEOUT_MS=1800000
+
+=== S6 no ambient value set anywhere ===
+warning: /tmp/fm-pi-idle-e2e/s6-unset/home/data/pd-desk-006/launch-brief.md records no delivery contract line (scaffolded before ship briefs recorded one); launching on the explicit --mode no-mistakes - confirm its definition of done matches
+spawned pd-desk-006 harness=pi kind=ship mode=no-mistakes yolo=off window=firstmate:fm-pd-desk-006 worktree=/tmp/fm-pi-idle-e2e/s6-unset/wt
+--- environment observed by the launched worker process ---
+launched-binary: /tmp/fm-pi-idle-e2e/s6-unset/bin/pi
+FM_PI_HARNESS=pi
+PI_CLAUDE_CODE_PROVIDER_IDLE_TIMEOUT_MS=1800000
+PASS  S6 clean-environment pi crewmate -> worker process saw PI_CLAUDE_CODE_PROVIDER_IDLE_TIMEOUT_MS=1800000
+
+=== S7 claude crewmate must not receive the Pi pin ===
+warning: /tmp/fm-pi-idle-e2e/s7-claude/home/data/pd-desk-007/launch-brief.md records no delivery contract line (scaffolded before ship briefs recorded one); launching on the explicit --mode no-mistakes - confirm its definition of done matches
+spawned pd-desk-007 harness=claude kind=ship mode=no-mistakes yolo=off window=firstmate:fm-pd-desk-007 worktree=/tmp/fm-pi-idle-e2e/s7-claude/wt
+--- environment observed by the launched worker process ---
+launched-binary: /tmp/fm-pi-idle-e2e/s7-claude/bin/claude
+PI_CLAUDE_CODE_PROVIDER_IDLE_TIMEOUT_MS=<unset>
+PASS  S7 claude crewmate (no Pi pin) -> worker process saw PI_CLAUDE_CODE_PROVIDER_IDLE_TIMEOUT_MS=<unset>
+
+=== S8 omp crewmate stays out of scope (no Pi pin) ===
+warning: /tmp/fm-pi-idle-e2e/s8-omp/home/data/pd-desk-008/launch-brief.md records no delivery contract line (scaffolded before ship briefs recorded one); launching on the explicit --mode no-mistakes - confirm its definition of done matches
+spawned pd-desk-008 harness=omp kind=ship mode=no-mistakes yolo=off window=firstmate:fm-pd-desk-008 worktree=/tmp/fm-pi-idle-e2e/s8-omp/wt
+--- environment observed by the launched worker process ---
+launched-binary: /tmp/fm-pi-idle-e2e/s8-omp/bin/omp
+PI_CLAUDE_CODE_PROVIDER_IDLE_TIMEOUT_MS=<unset>
+PASS  S8 omp crewmate (out of scope) -> worker process saw PI_CLAUDE_CODE_PROVIDER_IDLE_TIMEOUT_MS=<unset>
+
+=== RESULT ===
+all driven scenarios passed

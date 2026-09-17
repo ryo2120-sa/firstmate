@@ -1,0 +1,39 @@
+# Real consumer contract: pi-claude-code-provider 0.3.0
+# installed at /Users/nguyenl8/.pi/agent/npm/node_modules/pi-claude-code-provider and registered in ~/.pi/agent/npm/package.json, so a Firstmate-launched Pi loads it.
+
+## README configuration table (excerpt)
+90:| `PI_CLAUDE_CODE_PROVIDER_IDLE_TIMEOUT_MS` | Override the five-minute protocol-idle timeout with positive milliseconds. |
+91:| `PI_CLAUDE_CODE_PROVIDER_TOTAL_TIMEOUT_MS` | Override the 30-minute total timeout with positive milliseconds. |
+
+## src/provider.ts - defaults and resolution
+const DEFAULT_MCP_READY_TIMEOUT_MS = 5_000;
+const DEFAULT_IDLE_TIMEOUT_MS = 5 * 60_000;
+const DEFAULT_TOTAL_TIMEOUT_MS = 30 * 60_000;
+/** Internal dependency seam for deterministic cleanup-failure tests. */
+...
+        const configuredTotal = timeoutSetting("PI_CLAUDE_CODE_PROVIDER_TOTAL_TIMEOUT_MS", DEFAULT_TOTAL_TIMEOUT_MS);
+        const requestedTotal = options?.timeoutMs && options.timeoutMs > 0 ? options.timeoutMs : configuredTotal;
+        const totalTimeoutMs = Math.min(requestedTotal, configuredTotal);
+        const idleTimeoutMs = Math.min(
+          timeoutSetting("PI_CLAUDE_CODE_PROVIDER_IDLE_TIMEOUT_MS", DEFAULT_IDLE_TIMEOUT_MS),
+          totalTimeoutMs,
+        );
+        const readyTimeoutMs = Math.min(
+          timeoutSetting("PI_CLAUDE_CODE_PROVIDER_MCP_READY_TIMEOUT_MS", DEFAULT_MCP_READY_TIMEOUT_MS),
+          totalTimeoutMs,
+        );
+...
+function timeoutSetting(name: string, fallback: number): number {
+  const raw = process.env[name]?.trim();
+  if (!raw) return fallback;
+  const value = Number(raw);
+  if (!Number.isSafeInteger(value) || value <= 0) {
+    throw new ClaudeCodeError("timeout_config", `${name} must be a positive integer number of milliseconds`);
+  }
+  return value;
+}
+
+## Consequence
+DEFAULT_IDLE_TIMEOUT_MS = 5 * 60_000 = 300000  -> the reported five-minute stop when the variable is unset.
+DEFAULT_TOTAL_TIMEOUT_MS = 30 * 60_000 = 1800000 -> idleTimeoutMs = min(1800000, 1800000) = 1800000,
+so the pinned value is accepted by timeoutSetting() (positive safe integer) and is NOT clamped below 30 minutes.

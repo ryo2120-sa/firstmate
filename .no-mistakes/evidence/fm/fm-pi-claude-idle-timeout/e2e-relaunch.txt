@@ -1,0 +1,37 @@
+# S9 - Pi relaunch at TARGET commit 6ce3beb
+--- recorded task before relaunch ---
+window=firstmate:fm-pd-desk-001
+worktree=/tmp/fm-pi-idle-e2e/s1-pi/wt
+harness=pi
+kind=ship
+
+--- captain relaunches Pi task pd-desk-001 into endpoint firstmate:fm-pd-desk-001 (pane ambient value 300000) ---
+warning: /tmp/fm-pi-idle-e2e/s1-pi/home/data/pd-desk-001/launch-brief.md records no delivery contract line (scaffolded before ship briefs recorded one); launching on the explicit --mode no-mistakes - confirm its definition of done matches
+spawned pd-desk-001 harness=pi kind=ship mode=no-mistakes yolo=off window=firstmate:fm-pd-desk-001 worktree=/tmp/fm-pi-idle-e2e/s1-pi/wt
+fm-spawn exit=0
+--- launch command sent to the pane ---
+unset TRACEPARENT; env -u CURSOR_AGENT -u CURSOR_INVOKED_AS -u GEMINI_CLI FM_PI_HARNESS=pi PI_CLAUDE_CODE_PROVIDER_IDLE_TIMEOUT_MS=1800000 '/tmp/fm-pi-idle-e2e/s1-pi/bin/pi' --tui-mode regular -e '/tmp/fm-pi-idle-e2e/s1-pi/home/state/pd-desk-001.pi-ext.ts' "$('/Users/nguyenl8/.no-mistakes/worktrees/8642b6d0ddaf/01M2QGGJSE5NNYEPQ97N4GSXSA/bin/fm-operational-input.sh' encode launch-brief < '/tmp/fm-pi-idle-e2e/s1-pi/home/data/pd-desk-001/launch-brief.md')"
+--- environment observed by the replacement worker process ---
+launched-binary: /tmp/fm-pi-idle-e2e/s1-pi/bin/pi
+FM_PI_HARNESS=pi
+PI_CLAUDE_CODE_PROVIDER_IDLE_TIMEOUT_MS=1800000
+PASS  S9 pi relaunch -> replacement worker saw PI_CLAUDE_CODE_PROVIDER_IDLE_TIMEOUT_MS=1800000
+
+# S9 - same relaunch at BASE commit b182d0f (bug reproduced)
+--- recorded task before relaunch ---
+window=firstmate:fm-pd-desk-001
+worktree=/tmp/fm-pi-idle-e2e-base/s1-pi/wt
+harness=pi
+kind=ship
+
+--- captain relaunches Pi task pd-desk-001 into endpoint firstmate:fm-pd-desk-001 (pane ambient value 300000) ---
+warning: /tmp/fm-pi-idle-e2e-base/s1-pi/home/data/pd-desk-001/launch-brief.md records no delivery contract line (scaffolded before ship briefs recorded one); launching on the explicit --mode no-mistakes - confirm its definition of done matches
+spawned pd-desk-001 harness=pi kind=ship mode=no-mistakes yolo=off window=firstmate:fm-pd-desk-001 worktree=/tmp/fm-pi-idle-e2e-base/s1-pi/wt
+fm-spawn exit=0
+--- launch command sent to the pane ---
+unset TRACEPARENT; env -u CURSOR_AGENT -u CURSOR_INVOKED_AS -u GEMINI_CLI FM_PI_HARNESS=pi '/tmp/fm-pi-idle-e2e-base/s1-pi/bin/pi' --tui-mode regular -e '/tmp/fm-pi-idle-e2e-base/s1-pi/home/state/pd-desk-001.pi-ext.ts' "$('/tmp/fm-base/bin/fm-operational-input.sh' encode launch-brief < '/tmp/fm-pi-idle-e2e-base/s1-pi/home/data/pd-desk-001/launch-brief.md')"
+--- environment observed by the replacement worker process ---
+launched-binary: /tmp/fm-pi-idle-e2e-base/s1-pi/bin/pi
+FM_PI_HARNESS=pi
+PI_CLAUDE_CODE_PROVIDER_IDLE_TIMEOUT_MS=300000
+FAIL  S9 pi relaunch -> expected 1800000, saw 300000
