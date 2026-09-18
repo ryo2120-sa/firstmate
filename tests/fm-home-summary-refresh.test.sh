@@ -897,22 +897,22 @@ if ! kill -0 "$WATCH_PID" 2>/dev/null; then
   [ -e "$RESTART_HOME/state/.last-watcher-beat" ] \
     || fail "the recovery replacement watcher did not begin polling"
 fi
+# Stale-lock recovery below belongs to the skip-if-idle writer, so retire the
+# replacement watcher first. A live watcher republishes every poll while this
+# home has no ledger yet, and one of those refreshes can take the freed lock in
+# the moment the writer needs it - after which the writer correctly publishes
+# nothing and the recovery under test is never exercised.
+kill "$WATCH_PID" >/dev/null 2>&1 || true
+wait "$WATCH_PID" >/dev/null 2>&1 || true
+WATCH_PID=
 kill -KILL "$LOCK_HOLDER_PID" >/dev/null 2>&1 || true
 wait "$LOCK_HOLDER_PID" >/dev/null 2>&1 || true
 LOCK_HOLDER_PID=
 PATH="$FAKEBIN:$PATH" FM_ROOT_OVERRIDE="$ROOT" FM_HOME="$RESTART_HOME" \
   FM_HOME_SUMMARY_IF_IDLE=1 "$WRITER" --best-effort \
   || fail "stale-lock recovery changed the best-effort caller result"
-i=0
-while [ ! -e "$RESTART_HOME/state/home-summary.json" ] && [ "$i" -lt 200 ]; do
-  sleep 0.05
-  i=$((i + 1))
-done
 [ -e "$RESTART_HOME/state/home-summary.json" ] \
-  || fail "a dead publication lock wedged publication"
-kill "$WATCH_PID" >/dev/null 2>&1 || true
-wait "$WATCH_PID" >/dev/null 2>&1 || true
-WATCH_PID=
+  || fail "a dead publication lock wedged publication: $(cat "$RESTART_HOME/state/.home-summary-refresh.log" 2>/dev/null)"
 pass "publication remains single-flight across watcher restart"
 
 # A publication that keeps failing is deliberately non-fatal to its caller, so
