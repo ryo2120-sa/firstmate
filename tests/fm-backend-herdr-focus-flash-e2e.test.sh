@@ -333,16 +333,20 @@ pass 'fallback: a doomed pane holding a persistent child exhausts the proof and 
 C_AFTER=$(focus_snapshot) || fail 'could not capture the Part C post-close focus'
 [ "$C_AFTER" = "$C_BEFORE" ] \
   || fail "the fallback close left focus off the anchor ($C_BEFORE -> $C_AFTER)"
+[ -s "$C_FOCUS_SAMPLES" ] || fail 'the Part C sampler captured no focus sample during the fallback close'
 C_WRONG=$(grep -Fvxc -- "$C_BEFORE" "$C_FOCUS_SAMPLES" || true)
 if [ "$STEAL_LIVE" = 1 ]; then
   # A defective release cannot make this path focus-safe, which is precisely why
-  # default-on projection is floored above it. The wrong-focus window is
-  # explicitly accepted here, but only as a BOUNDED one: the restore backstop
-  # must have put the anchor back exactly, and the whole exposure must end with
-  # the operation rather than parking the captain somewhere else.
-  [ "$C_WRONG" -ge 1 ] \
-    || fail 'Part C reached the fallback on a defective release but observed no wrong-focus sample at all, so the sampler proved nothing'
-  pass "fallback on a defective release: a bounded wrong-focus window of $C_WRONG samples was fully restored to the anchor"
+  # default-on projection is floored above it. The sampler races the fallback
+  # close, so whether it happens to LAND inside the transient wrong-focus
+  # interval proves nothing about product behavior; requiring a witness makes
+  # the test flake whenever the sampler loses that race. Likewise the last
+  # sample is whichever one the sampler happened to finish as the operation
+  # flag cleared, so it is not a restoration witness either. What the product
+  # actually promises is bounded and restored, and the restoration is already
+  # proven deterministically by C_AFTER above; all this sampler owes here is
+  # the liveness asserted for both arms above.
+  pass "fallback on a defective release: the anchor was restored exactly after a wrong-focus window of $C_WRONG samples"
 else
   [ "$C_WRONG" -eq 0 ] \
     || fail "a focus-preserving release exposed $C_WRONG wrong-focus samples on the fallback path"

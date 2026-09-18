@@ -1110,7 +1110,15 @@ spawn_herdr_presentation_order_lock_acquire() {
   lock_path=$(fm_backend_herdr_presentation_session_lock_path "$session") || return 1
   HERDR_PRESENTATION_ORDER_LOCK="$lock_path"
   attempt=0
-  while [ "$attempt" -lt 50 ]; do
+  # A peer can legitimately hold this lock across the whole `treehouse get`
+  # worktree-settle wait below, whose own ceiling is 60s ("did not enter an
+  # isolated worktree within 60s"). This budget (700 * 0.1s = 70s) clears that
+  # bounded wait, so keep the two numbers in sync if either changes. It is not
+  # a ceiling on the hold itself: the held region also runs `git fetch origin`
+  # in freshen_spawn_worktree_base, which is unbounded network work, so a peer
+  # against a slow or stalled remote can still outlast 70s and make a
+  # concurrent waiter refuse. That residual is known and not addressed here.
+  while [ "$attempt" -lt 700 ]; do
     if fm_lock_try_acquire "$HERDR_PRESENTATION_ORDER_LOCK"; then
       HERDR_PRESENTATION_ORDER_LOCK_HELD=1
       return 0
