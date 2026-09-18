@@ -1,0 +1,58 @@
+FM_TEST_BEGIN 2026-09-18T12:15:45Z tests/fm-spawn-dispatch-profile.test.sh family=backend-dispatch expected_gate_skip=none
+ok - allowlist=absent preserves the operational floor and filters only when opted in
+ok - allowlist=missing-config preserves the operational floor and filters only when opted in
+ok - allowlist=enabled preserves the operational floor and filters only when opted in
+ok - allowlist=empty preserves the operational floor and filters only when opted in
+ok - invalid allowlist names refuse before launch or task publication
+ok - inaccessible config with present allowlist refuses before launch or task publication
+ok - inaccessible config with absent allowlist refuses before launch or task publication
+ok - inaccessible ancestor with present allowlist refuses before launch or task publication
+ok - inaccessible ancestor with absent allowlist refuses before launch or task publication
+ok - secondmate launch inherits the allowlist for subsequent worker launches
+ok - local inheritance preserves the allowlist on source errors and mirrors proven absence
+ok - remote inheritance preserves the allowlist on source errors and mirrors proven absence
+ok - fm-spawn: actual ship/scout launch commands deliver the worker role contract
+ok - no --model/--effort records defaults and types the claude launch instructions
+ok - non-cursor launches clear inherited Cursor identity markers
+ok - relative home overrides ignore CDPATH and become absolute before spawn launch construction
+ok - FM_HOME defaults resolve relative paths and preserve absolute spellings
+ok - absolute override spellings are preserved in spawn launch paths
+ok - unresolvable relative spawn overrides fail with named diagnostics
+ok - active crew-dispatch profile requires an explicit harness for ship spawns
+ok - active crew-dispatch profile requires an explicit harness for scout spawns
+ok - active crew-dispatch profile allows an explicit resolved harness
+ok - active crew-dispatch profile allows the legacy positional harness form
+ok - active crew-dispatch profile allows the raw launch-command escape hatch
+ok - claude receives --model and --effort profile flags
+ok - codex receives --model and model_reasoning_effort profile flags
+ok - codex omits unsupported max effort instead of passing a bad config value
+ok - grok receives --model and --reasoning-effort profile flags
+ok - grok omits unsupported max reasoning effort
+ok - grok omits unsupported xhigh reasoning effort
+ok - cursor receives its model-qualified reasoning class and exact task workspace
+ok - cursor refuses model ids absent from its resolved binary's live catalog
+ok - cursor preserves the requested model when its live catalog is unreachable
+ok - opencode receives --model and omits the unsupported effort axis
+ok - native effort validator checks harness and model as separate axes
+ok - Ultra is explicit for native Pi and Pi-signed, including direct-PR, and refuses unsupported profiles before provisioning
+ok - batch dispatch preserves native Ultra in metadata and launch flags
+not ok - pi launch did not force the regular TUI while threading the requested model and max thinking level (missing: 'FM_PI_HARNESS=pi PI_CLAUDE_CODE_PROVIDER_IDLE_TIMEOUT_MS=1800000 '/private/var/folders/rj/df9ksn5s735899fw3l79fzp80000gq/T/fm-spawn-dispatch-profile.uUhdIh/profile-pi/fake/fakebin/pi' --tui-mode regular --model 'openai-codex/gpt-5.6-sol' --thinking 'max' -e')
+--- output ---
+env -u CURSOR_AGENT -u CURSOR_INVOKED_AS -u GEMINI_CLI FM_PI_HARNESS=pi '/private/var/folders/rj/df9ksn5s735899fw3l79fzp80000gq/T/fm-spawn-dispatch-profile.uUhdIh/profile-pi/fake/fakebin/pi' --tui-mode regular --model 'openai-codex/gpt-5.6-sol' --thinking 'max' -e '/private/var/folders/rj/df9ksn5s735899fw3l79fzp80000gq/T/fm-spawn-dispatch-profile.uUhdIh/profile-pi/home/state/profile-pi-z8.pi-ext.ts' "$('/var/folders/rj/df9ksn5s735899fw3l79fzp80000gq/T/fm-base.AfX3oK/bin/fm-operational-input.sh' encode launch-brief < '/private/var/folders/rj/df9ksn5s735899fw3l79fzp80000gq/T/fm-spawn-dispatch-profile.uUhdIh/profile-pi/home/data/profile-pi-z8/launch-brief.md')"
+FM_TEST_END 2026-09-18T12:18:13Z tests/fm-spawn-dispatch-profile.test.sh exit=1 duration_ms=147856 gate_skip=false
+FM_TEST_SUMMARY total=1 failed=1 skipped_gate=0 duration_ms=147924
+FM_TEST_SUMMARY_FAMILY family=backend-dispatch count=1 duration_ms=147856 failed=1
+FM_TEST_SLOWEST rank=1 script=tests/fm-spawn-dispatch-profile.test.sh duration_ms=147856
+
+================================================================================
+The run above aborts at the first failing assertion, so the two dedicated new
+tests were then run in isolation against the same base tree (79a3984 materialized
+via `git archive`, with the target commit's test file copied in):
+
+  $ bash tests/idle-pin-only.test.sh        # test_pi_family_launch_sets_fixed_idle_timeout
+  not ok - pi worker launch did not force the 30-minute idle timeout: 300000
+
+  $ bash tests/idle-pin-raw-only.test.sh    # test_raw_pi_launch_receives_fixed_idle_timeout
+  not ok - raw pi launch did not force the 30-minute idle timeout: 300000
+
+Both pass on the target commit (b19fde8) in the full-suite run.

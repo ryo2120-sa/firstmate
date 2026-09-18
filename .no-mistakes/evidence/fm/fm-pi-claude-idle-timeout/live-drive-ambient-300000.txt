@@ -1,0 +1,128 @@
+=== ambient (poisoned) environment seen by this drive and inherited by the lab herdr server ===
+PI_CLAUDE_CODE_PROVIDER_IDLE_TIMEOUT_MS=300000
+FM_AMBIENT_PROBE=300000
+
+----- A. canonical Pi worker (--harness pi) -----
+$ PI_CLAUDE_CODE_PROVIDER_IDLE_TIMEOUT_MS=300000 fm-spawn.sh pi-worker <project> --harness pi --backend herdr
+warning: /private/var/folders/rj/df9ksn5s735899fw3l79fzp80000gq/T/fm-pi-idle-live.c4HkkC/fm-home/data/pi-worker/launch-brief.md records no delivery contract line (scaffolded before ship briefs recorded one); launching on the explicit --mode no-mistakes - confirm its definition of done matches
+spawned pi-worker harness=pi kind=ship mode=no-mistakes yolo=off window=fm-lab-fm-pi-idle-17104-4208:w1:p2 worktree=/Users/nguyenl8/.treehouse/scratch-project-44ae33/1/scratch-project
+spawn rc=0
+meta: harness=pi backend=herdr herdr_pane_id=w1:p2 
+
+----- A2. canonical pi-signed worker (--harness pi-signed) -----
+$ PI_CLAUDE_CODE_PROVIDER_IDLE_TIMEOUT_MS=300000 fm-spawn.sh pi-signed-worker <project> --harness pi-signed --backend herdr
+warning: /private/var/folders/rj/df9ksn5s735899fw3l79fzp80000gq/T/fm-pi-idle-live.c4HkkC/fm-home/data/pi-signed-worker/launch-brief.md records no delivery contract line (scaffolded before ship briefs recorded one); launching on the explicit --mode no-mistakes - confirm its definition of done matches
+spawned pi-signed-worker harness=pi-signed kind=ship mode=no-mistakes yolo=off window=fm-lab-fm-pi-idle-17104-4208:w1:p3 worktree=/Users/nguyenl8/.treehouse/scratch-project-44ae33/2/scratch-project
+spawn rc=0
+meta: harness=pi-signed backend=herdr herdr_pane_id=w1:p3 
+
+----- B. raw Pi launch escape hatch -----
+$ PI_CLAUDE_CODE_PROVIDER_IDLE_TIMEOUT_MS=300000 fm-spawn.sh pi-raw <project> /private/var/folders/rj/df9ksn5s735899fw3l79fzp80000gq/T/fm-pi-idle-live.c4HkkC/bin/pi --tui-mode regular --backend herdr
+warning: /private/var/folders/rj/df9ksn5s735899fw3l79fzp80000gq/T/fm-pi-idle-live.c4HkkC/fm-home/data/pi-raw/launch-brief.md records no delivery contract line (scaffolded before ship briefs recorded one); launching on the explicit --mode no-mistakes - confirm its definition of done matches
+spawned pi-raw harness=pi kind=ship mode=no-mistakes yolo=off window=fm-lab-fm-pi-idle-17104-4208:w1:p4 worktree=/Users/nguyenl8/.treehouse/scratch-project-44ae33/3/scratch-project
+spawn rc=0
+meta: harness=pi backend=herdr herdr_pane_id=w1:p4 
+
+----- C. omp worker (out of scope for the pin) -----
+$ PI_CLAUDE_CODE_PROVIDER_IDLE_TIMEOUT_MS=300000 fm-spawn.sh omp-worker <project> --harness omp --backend herdr
+warning: /private/var/folders/rj/df9ksn5s735899fw3l79fzp80000gq/T/fm-pi-idle-live.c4HkkC/fm-home/data/omp-worker/launch-brief.md records no delivery contract line (scaffolded before ship briefs recorded one); launching on the explicit --mode no-mistakes - confirm its definition of done matches
+spawned omp-worker harness=omp kind=ship mode=no-mistakes yolo=off window=fm-lab-fm-pi-idle-17104-4208:w1:p5 worktree=/Users/nguyenl8/.treehouse/scratch-project-44ae33/4/scratch-project
+spawn rc=0
+meta: harness=omp backend=herdr herdr_pane_id=w1:p5 
+
+=== rendered terminal output of the real Herdr panes ===
+--- herdr pane w1:p2 terminal output (pi-worker) ---
+🌳 Entered worktree at ~/.treehouse/scratch-project-44ae33/1/scratch-project. Type 'exit' to return.
+scratch-project on  HEAD
+❯ export GOTMPDIR=/tmp/fm-pi-worker/gotmp
+export FM_TASK_ID=pi-worker
+scratch-project on  HEAD
+❯ export FM_TASK_ID=pi-worker
+scraenv-project on  HEAD
+000 '/private/var/folders/rj/df9ksn5s735899fw3l79fzp80000gq/T/fm-pi-idle-live.c4HkkC/bin/pi' --tui-mode regular -e '/pri
+vate/var/folders/rj/df9ksn5s735899fw3l79fzp80000gq/T/fm-pi-idle-live.c4HkkC/fm-home/state/pi-worker.pi-ext.ts' "$('/User
+s/nguyenl8/.no-mistakes/worktrees/8642b6d0ddaf/01M2T5NSM0SHZPW990FP5WBYGW/bin/fm-operational-input.sh' encode launch-bri
+ef < '/private/var/folders/rj/df9ksn5s735899fw3l79fzp80000gq/T/fm-pi-idle-live.c4HkkC/fm-home/data/pi-worker/launch-brie
+f.md')"
+--- herdr pane w1:p3 terminal output (pi-signed-worker) ---
+🌳 Entered worktree at ~/.treehouse/scratch-project-44ae33/2/scratch-project. Type 'exit' to return.
+scratch-project on  HEAD
+❯ export GOTMPDIR=/tmp/fm-pi-signed-worker/gotmp
+export FM_TASK_ID=pi-signed-worker
+scratch-project on  HEAD
+❯ export FM_TASK_ID=pi-signed-worker
+scraenv-project on  HEAD
+MS=1800000 '/private/var/folders/rj/df9ksn5s735899fw3l79fzp80000gq/T/fm-pi-idle-live.c4HkkC/bin/pi-signed' --tui-mode re
+gular -e '/private/var/folders/rj/df9ksn5s735899fw3l79fzp80000gq/T/fm-pi-idle-live.c4HkkC/fm-home/state/pi-signed-worker
+.pi-ext.ts' "$('/Users/nguyenl8/.no-mistakes/worktrees/8642b6d0ddaf/01M2T5NSM0SHZPW990FP5WBYGW/bin/fm-operational-input.
+sh' encode launch-brief < '/private/var/folders/rj/df9ksn5s735899fw3l79fzp80000gq/T/fm-pi-idle-live.c4HkkC/fm-home/data/
+pi-signed-worker/launch-brief.md')"
+--- herdr pane w1:p4 terminal output (pi-raw) ---
+treehouse get
+scratch-project on  main
+❯ treehouse get
+🌳 Setting up worktree...
+🌳 Entered worktree at ~/.treehouse/scratch-project-44ae33/3/scratch-project. Type 'exit' to return.
+scratch-project on  HEAD
+❯ export GOTMPDIR=/tmp/fm-pi-raw/gotmp
+export FM_TASK_ID=pi-raw
+scratch-project on  HEAD
+❯ export FM_TASK_ID=pi-raw
+scraenv-project on  HEAD
+000 /private/var/folders/rj/df9ksn5s735899fw3l79fzp80000gq/T/fm-pi-idle-live.c4HkkC/bin/pi --tui-mode regular
+--- herdr pane w1:p5 terminal output (omp-worker) ---
+scratch-project on  HEAD
+❯ export GOTMPDIR=/tmp/fm-omp-worker/gotmp
+export FM_TASK_ID=omp-worker
+scratch-project on  HEAD
+❯ export FM_TASK_ID=omp-worker
+scraenv-project on  HEAD
+AS FM_OMP_HARNESS=omp OMP_SKIP_SETUP=1 '/private/var/folders/rj/df9ksn5s735899fw3l79fzp80000gq/T/fm-pi-idle-live.c4HkkC/
+bin/omp' --config '/Users/nguyenl8/.no-mistakes/worktrees/8642b6d0ddaf/01M2T5NSM0SHZPW990FP5WBYGW/.omp/fm-worker-overlay
+.yml' --auto-approve --cwd '/Users/nguyenl8/.treehouse/scratch-project-44ae33/4/scratch-project' -e '/private/var/folder
+s/rj/df9ksn5s735899fw3l79fzp80000gq/T/fm-pi-idle-live.c4HkkC/fm-home/state/omp-worker.omp-ext.ts' "$('/Users/nguyenl8/.n
+o-mistakes/worktrees/8642b6d0ddaf/01M2T5NSM0SHZPW990FP5WBYGW/bin/fm-operational-input.sh' encode launch-brief < '/privat
+e/var/folders/rj/df9ksn5s735899fw3l79fzp80000gq/T/fm-pi-idle-live.c4HkkC/fm-home/data/omp-worker/launch-brief.md')"
+
+=== environment recorded by each harness process actually launched in its real Herdr pane ===
+=== launched 2026-09-18T12:20:34Z
+argv0=/private/var/folders/rj/df9ksn5s735899fw3l79fzp80000gq/T/fm-pi-idle-live.c4HkkC/bin/pi
+cwd=/Users/nguyenl8/.treehouse/scratch-project-44ae33/1/scratch-project
+FM_PI_HARNESS=pi
+FM_OMP_HARNESS=<unset>
+PI_CLAUDE_CODE_PROVIDER_IDLE_TIMEOUT_MS=1800000
+FM_AMBIENT_PROBE=300000
+=== launched 2026-09-18T12:20:40Z
+argv0=/private/var/folders/rj/df9ksn5s735899fw3l79fzp80000gq/T/fm-pi-idle-live.c4HkkC/bin/pi-signed
+cwd=/Users/nguyenl8/.treehouse/scratch-project-44ae33/2/scratch-project
+FM_PI_HARNESS=pi-signed
+FM_OMP_HARNESS=<unset>
+PI_CLAUDE_CODE_PROVIDER_IDLE_TIMEOUT_MS=1800000
+FM_AMBIENT_PROBE=300000
+=== launched 2026-09-18T12:20:45Z
+argv0=/private/var/folders/rj/df9ksn5s735899fw3l79fzp80000gq/T/fm-pi-idle-live.c4HkkC/bin/pi
+cwd=/Users/nguyenl8/.treehouse/scratch-project-44ae33/3/scratch-project
+FM_PI_HARNESS=pi
+FM_OMP_HARNESS=<unset>
+PI_CLAUDE_CODE_PROVIDER_IDLE_TIMEOUT_MS=1800000
+FM_AMBIENT_PROBE=300000
+=== launched 2026-09-18T12:20:51Z
+argv0=/private/var/folders/rj/df9ksn5s735899fw3l79fzp80000gq/T/fm-pi-idle-live.c4HkkC/bin/omp
+cwd=/Users/nguyenl8/.treehouse/scratch-project-44ae33/4/scratch-project
+FM_PI_HARNESS=<unset>
+FM_OMP_HARNESS=omp
+PI_CLAUDE_CODE_PROVIDER_IDLE_TIMEOUT_MS=300000
+FM_AMBIENT_PROBE=300000
+
+=== manual launch (README snippet form), no fm-spawn involved ===
+$ pi   # captain launching Pi by hand
+--- last record ---
+=== launched 2026-09-18T12:20:52Z
+argv0=/private/var/folders/rj/df9ksn5s735899fw3l79fzp80000gq/T/fm-pi-idle-live.c4HkkC/bin/pi
+cwd=/Users/nguyenl8/.no-mistakes/worktrees/8642b6d0ddaf/01M2T5NSM0SHZPW990FP5WBYGW
+FM_PI_HARNESS=<unset>
+FM_OMP_HARNESS=<unset>
+PI_CLAUDE_CODE_PROVIDER_IDLE_TIMEOUT_MS=300000
+FM_AMBIENT_PROBE=300000
+
+fm-spawn under test: /Users/nguyenl8/.no-mistakes/worktrees/8642b6d0ddaf/01M2T5NSM0SHZPW990FP5WBYGW/bin/fm-spawn.sh

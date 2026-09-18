@@ -1,0 +1,72 @@
+=== ambient (poisoned) environment seen by this drive and inherited by the lab herdr server ===
+PI_CLAUDE_CODE_PROVIDER_IDLE_TIMEOUT_MS=3600000
+FM_AMBIENT_PROBE=3600000
+
+----- A. canonical Pi worker (--harness pi) -----
+$ PI_CLAUDE_CODE_PROVIDER_IDLE_TIMEOUT_MS=3600000 fm-spawn.sh pi-worker <project> --harness pi --backend herdr
+warning: /private/var/folders/rj/df9ksn5s735899fw3l79fzp80000gq/T/fm-pi-idle-live.4ojvAk/fm-home/data/pi-worker/launch-brief.md records no delivery contract line (scaffolded before ship briefs recorded one); launching on the explicit --mode no-mistakes - confirm its definition of done matches
+spawned pi-worker harness=pi kind=ship mode=no-mistakes yolo=off window=fm-lab-fm-pi-idle-8106-27328:w1:p2 worktree=/Users/nguyenl8/.treehouse/scratch-project-2867a4/1/scratch-project
+spawn rc=0
+meta: harness=pi backend=herdr herdr_pane_id=w1:p2 
+
+----- A2. canonical pi-signed worker (--harness pi-signed) -----
+$ PI_CLAUDE_CODE_PROVIDER_IDLE_TIMEOUT_MS=3600000 fm-spawn.sh pi-signed-worker <project> --harness pi-signed --backend herdr
+warning: /private/var/folders/rj/df9ksn5s735899fw3l79fzp80000gq/T/fm-pi-idle-live.4ojvAk/fm-home/data/pi-signed-worker/launch-brief.md records no delivery contract line (scaffolded before ship briefs recorded one); launching on the explicit --mode no-mistakes - confirm its definition of done matches
+spawned pi-signed-worker harness=pi-signed kind=ship mode=no-mistakes yolo=off window=fm-lab-fm-pi-idle-8106-27328:w1:p3 worktree=/Users/nguyenl8/.treehouse/scratch-project-2867a4/2/scratch-project
+spawn rc=0
+meta: harness=pi-signed backend=herdr herdr_pane_id=w1:p3 
+
+----- B. raw Pi launch escape hatch -----
+$ PI_CLAUDE_CODE_PROVIDER_IDLE_TIMEOUT_MS=3600000 fm-spawn.sh pi-raw <project> /private/var/folders/rj/df9ksn5s735899fw3l79fzp80000gq/T/fm-pi-idle-live.4ojvAk/bin/pi --tui-mode regular --backend herdr
+warning: /private/var/folders/rj/df9ksn5s735899fw3l79fzp80000gq/T/fm-pi-idle-live.4ojvAk/fm-home/data/pi-raw/launch-brief.md records no delivery contract line (scaffolded before ship briefs recorded one); launching on the explicit --mode no-mistakes - confirm its definition of done matches
+spawned pi-raw harness=pi kind=ship mode=no-mistakes yolo=off window=fm-lab-fm-pi-idle-8106-27328:w1:p4 worktree=/Users/nguyenl8/.treehouse/scratch-project-2867a4/3/scratch-project
+spawn rc=0
+meta: harness=pi backend=herdr herdr_pane_id=w1:p4 
+
+----- C. omp worker (out of scope for the pin) -----
+$ PI_CLAUDE_CODE_PROVIDER_IDLE_TIMEOUT_MS=3600000 fm-spawn.sh omp-worker <project> --harness omp --backend herdr
+warning: /private/var/folders/rj/df9ksn5s735899fw3l79fzp80000gq/T/fm-pi-idle-live.4ojvAk/fm-home/data/omp-worker/launch-brief.md records no delivery contract line (scaffolded before ship briefs recorded one); launching on the explicit --mode no-mistakes - confirm its definition of done matches
+spawned omp-worker harness=omp kind=ship mode=no-mistakes yolo=off window=fm-lab-fm-pi-idle-8106-27328:w1:p5 worktree=/Users/nguyenl8/.treehouse/scratch-project-2867a4/4/scratch-project
+spawn rc=0
+meta: harness=omp backend=herdr herdr_pane_id=w1:p5 
+
+=== environment recorded by each harness process actually launched in its real Herdr pane ===
+=== launched 2026-09-18T12:13:22Z
+argv0=/private/var/folders/rj/df9ksn5s735899fw3l79fzp80000gq/T/fm-pi-idle-live.4ojvAk/bin/pi
+cwd=/Users/nguyenl8/.treehouse/scratch-project-2867a4/1/scratch-project
+FM_PI_HARNESS=pi
+FM_OMP_HARNESS=<unset>
+PI_CLAUDE_CODE_PROVIDER_IDLE_TIMEOUT_MS=1800000
+FM_AMBIENT_PROBE=3600000
+=== launched 2026-09-18T12:13:28Z
+argv0=/private/var/folders/rj/df9ksn5s735899fw3l79fzp80000gq/T/fm-pi-idle-live.4ojvAk/bin/pi-signed
+cwd=/Users/nguyenl8/.treehouse/scratch-project-2867a4/2/scratch-project
+FM_PI_HARNESS=pi-signed
+FM_OMP_HARNESS=<unset>
+PI_CLAUDE_CODE_PROVIDER_IDLE_TIMEOUT_MS=1800000
+FM_AMBIENT_PROBE=3600000
+=== launched 2026-09-18T12:13:34Z
+argv0=/private/var/folders/rj/df9ksn5s735899fw3l79fzp80000gq/T/fm-pi-idle-live.4ojvAk/bin/pi
+cwd=/Users/nguyenl8/.treehouse/scratch-project-2867a4/3/scratch-project
+FM_PI_HARNESS=pi
+FM_OMP_HARNESS=<unset>
+PI_CLAUDE_CODE_PROVIDER_IDLE_TIMEOUT_MS=1800000
+FM_AMBIENT_PROBE=3600000
+=== launched 2026-09-18T12:13:40Z
+argv0=/private/var/folders/rj/df9ksn5s735899fw3l79fzp80000gq/T/fm-pi-idle-live.4ojvAk/bin/omp
+cwd=/Users/nguyenl8/.treehouse/scratch-project-2867a4/4/scratch-project
+FM_PI_HARNESS=<unset>
+FM_OMP_HARNESS=omp
+PI_CLAUDE_CODE_PROVIDER_IDLE_TIMEOUT_MS=3600000
+FM_AMBIENT_PROBE=3600000
+
+=== manual launch (README snippet form), no fm-spawn involved ===
+$ pi   # captain launching Pi by hand
+--- last record ---
+=== launched 2026-09-18T12:13:41Z
+argv0=/private/var/folders/rj/df9ksn5s735899fw3l79fzp80000gq/T/fm-pi-idle-live.4ojvAk/bin/pi
+cwd=/Users/nguyenl8/.no-mistakes/worktrees/8642b6d0ddaf/01M2T5NSM0SHZPW990FP5WBYGW
+FM_PI_HARNESS=<unset>
+FM_OMP_HARNESS=<unset>
+PI_CLAUDE_CODE_PROVIDER_IDLE_TIMEOUT_MS=3600000
+FM_AMBIENT_PROBE=3600000
