@@ -1,0 +1,16 @@
+### BASE test file, defective-release arm forced, sampler observes no wrong-focus sample (the flake)
+ok - old path note: this Herdr release preserves focus across the explicit close; continuing with outcome-only assertions
+NOTE(local-host): Part B took the plain route on herdr 0.9.0; continuing to Part C
+ok - mitigation: every in-operation sample preserved exact focus while the doomed workspace was removed
+ok - fallback: a doomed pane holding a persistent child exhausts the proof and takes the plain explicit close
+not ok - Part C reached the fallback on a defective release but observed no wrong-focus sample at all, so the sampler proved nothing
+exit=1
+
+### TARGET test file, same conditions
+ok - old path note: this Herdr release preserves focus across the explicit close; continuing with outcome-only assertions
+NOTE(local-host): Part B took the plain route on herdr 0.9.0; continuing to Part C
+ok - mitigation: every in-operation sample preserved exact focus while the doomed workspace was removed
+ok - fallback: a doomed pane holding a persistent child exhausts the proof and takes the plain explicit close
+ok - fallback on a defective release: the anchor was restored exactly after a wrong-focus window of 0 samples
+not ok - herdr 0.9.0 (protocol 22) is at or above the floor but steals focus on the explicit close
+exit=1

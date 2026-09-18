@@ -1,0 +1,25 @@
+Serial-shard work balance, driven through the real runner CLI (bin/fm-test-run.sh --list --lane portable-serial-<k>of5).
+Both partitions are scored with the SAME current-truth measurements (the refreshed table), which is what actually decides CI wall time.
+
+== BASE (stale-hint) partition, scored with the REFRESHED (current-truth) measurements ==
+  shard 1:  32 scripts  predicted wall =     25.3 min
+  shard 2:  33 scripts  predicted wall =     18.4 min
+  shard 3:  33 scripts  predicted wall =     17.2 min
+  shard 4:  33 scripts  predicted wall =     17.6 min
+  shard 5:  34 scripts  predicted wall =     25.7 min
+  worst shard 25.7 min, best shard 17.2 min, spread 8.5 min
+
+== TARGET (refreshed-hint) partition, scored with the REFRESHED (current-truth) measurements ==
+  shard 1:  30 scripts  predicted wall =     20.8 min
+  shard 2:  34 scripts  predicted wall =     20.8 min
+  shard 3:  34 scripts  predicted wall =     20.8 min
+  shard 4:  34 scripts  predicted wall =     20.8 min
+  shard 5:  33 scripts  predicted wall =     20.8 min
+  worst shard 20.8 min, best shard 20.8 min, spread 0.0 min
+
+Coverage guard on the target:
+FM_TEST_COVERAGE ok total=205 parallel=24 parallel_max_ms=417163 parallel_imbalance_ms=2894 parallel_unhinted=0 serial=165 serial_shards=5 serial_unhinted=0 herdr=16
+
+Serial lane membership base vs target:
+  identical - 165 scripts, none dropped or added
+CI caps unchanged: portable serial job timeout-minutes: timeout-minutes:30, shard matrix job-total still 1, 2, 3, 4, 5

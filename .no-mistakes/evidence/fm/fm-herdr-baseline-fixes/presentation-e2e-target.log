@@ -1,0 +1,11 @@
+[19:35:00] ok - real Herdr lab: an opted-out spawn retains the Stage 1 Herdr command sequence with zero ordering calls
+[19:35:14] ok - real Herdr lab: a home that configured nothing is projected by default on herdr 0.9.0
+[19:35:28] ok - real Herdr lab: every projected create, task-tab create, seeded prune, and move preserves active workspace and tab
+[19:35:44] ok - real Herdr lab: persisted-focused seeded prune proceeds when no live client is attached
+[19:37:54] ok - real Herdr lab: bounded lock contention warns and falls back flat without projection or focus drift
+[19:38:08] not ok - workspace order was not firstmate, stable primary block, secondmates: firstmate
+[19:38:08] 2ndmate-alpha
+[19:38:08] 2ndmate-bravo
+[19:38:08] └ shape · p:Rfu6g87i4t3iylGX--sxhg
+[19:38:08] └ order-a · p:NYNKzKzyVw4g0pPb_90dVw
+[19:38:08] └ order-b · p:I-rMPrVOUckvJguQxbXgRA

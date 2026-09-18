@@ -1,0 +1,15 @@
+Scenario: a peer holds the Herdr session presentation lock for 62s - inside the documented 60s legitimate
+hold window (the treehouse-get worktree-settle ceiling) - while a real 'fm spawn' runs against a guarded
+real Herdr lab. Driver: tests/fm-backend-herdr-presentation-e2e.test.sh with its lock-contention holder
+changed from never-release to a 62s bounded hold, and the assertion changed to require projection.
+Only bin/fm-spawn.sh differs between the two runs.
+
+===== BASE b182d0f (50 attempts = 5s budget) =====
+scenario: a peer holds the session presentation lock for 62s, inside the 60s legitimate hold window
+spawn returned after 19s
+not ok - the spawn REFUSED to wait out a 62s peer hold and fell back flat without projection
+
+===== TARGET 6214f70 (700 attempts = 70s budget) =====
+scenario: a peer holds the session presentation lock for 62s, inside the 60s legitimate hold window
+spawn returned after 69s
+ok - real Herdr lab: the spawn waited out a 62s peer hold (69s wall) and projected instead of refusing
