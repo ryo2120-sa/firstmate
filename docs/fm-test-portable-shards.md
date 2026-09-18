@@ -117,7 +117,7 @@ Portable shards, each portable serial shard, and the Herdr lane upload runner-ge
 The same acquire budget applies on the spawn abort path inside the `EXIT` trap, so a failing or interrupted spawn can now take about 70 seconds to exit rather than about 5.
 That is a known, accepted residual of raising the budget and a candidate for separate follow-up work.
 Only the spawn's own wait was raised: the two sibling waiters on this same lock, the teardown preflight in `bin/fm-teardown.sh` and the pane kill in `bin/backends/herdr.sh`, still give up after about 5 seconds while a peer may legitimately hold it for up to 60, so a concurrent teardown can still refuse with nothing changed and a kill can still decline the pane close.
-That exposure predates this change and is unaffected by it; unifying the three budgets is separately tracked follow-up work.
+That exposure predates this change and is unaffected by it; unifying the three budgets is a candidate for separate follow-up work.
 
 Timeouts are intended as hang tripwires; a passing coverage guard does not establish a healthy job duration.
 `.github/workflows/ci.yml` owns the exact numbers.

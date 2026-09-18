@@ -333,7 +333,7 @@ pass 'fallback: a doomed pane holding a persistent child exhausts the proof and 
 C_AFTER=$(focus_snapshot) || fail 'could not capture the Part C post-close focus'
 [ "$C_AFTER" = "$C_BEFORE" ] \
   || fail "the fallback close left focus off the anchor ($C_BEFORE -> $C_AFTER)"
-C_SAMPLE_COUNT=$(wc -l < "$C_FOCUS_SAMPLES" | tr -d ' ')
+[ -s "$C_FOCUS_SAMPLES" ] || fail 'the Part C sampler captured no focus sample during the fallback close'
 C_WRONG=$(grep -Fvxc -- "$C_BEFORE" "$C_FOCUS_SAMPLES" || true)
 if [ "$STEAL_LIVE" = 1 ]; then
   # A defective release cannot make this path focus-safe, which is precisely why
@@ -345,10 +345,8 @@ if [ "$STEAL_LIVE" = 1 ]; then
   # flag cleared, so it is not a restoration witness either. What the product
   # actually promises is bounded and restored, and the restoration is already
   # proven deterministically by C_AFTER above; all this sampler owes here is
-  # liveness, so require only that it ran.
-  [ "$C_SAMPLE_COUNT" -ge 1 ] \
-    || fail 'Part C focus sampler recorded no samples at all, so the harness proved nothing'
-  pass "fallback on a defective release: sampler recorded $C_SAMPLE_COUNT samples and the anchor was restored exactly after a wrong-focus window of $C_WRONG samples"
+  # the liveness asserted for both arms above.
+  pass "fallback on a defective release: the anchor was restored exactly after a wrong-focus window of $C_WRONG samples"
 else
   [ "$C_WRONG" -eq 0 ] \
     || fail "a focus-preserving release exposed $C_WRONG wrong-focus samples on the fallback path"
