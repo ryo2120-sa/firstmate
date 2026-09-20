@@ -39,7 +39,7 @@ type InteractiveModePrototype = {
 };
 type CalmOperationalUserLayoutPatch = {
   hidesOperationalInput: () => boolean;
-  isOperationalInput: (text: string) => boolean;
+  operationalKind: (text: string) => string | undefined;
 };
 
 // Keep the introduction-version symbol stable so a compatible upgrade cannot
@@ -48,6 +48,10 @@ const CALM_OPERATIONAL_USER_LAYOUT_PATCH = Symbol.for(
   "firstmate:calm-operational-user-layout:pi-0.81.1",
 );
 const LEGACY_CALM_OPERATIONAL_PREFIX = "\u2063Supervisor escalate (";
+// The legacy carrier predates the typed header, so it has no kind of its own to report.
+// It is an escalation handed to the captain, which opens a turn like every other
+// operational kind except turn-end-guard.
+const LEGACY_CALM_OPERATIONAL_KIND = "legacy-supervisor-escalate";
 
 function contentIsTextOnly(content: unknown): boolean {
   if (typeof content === "string") return true;
@@ -66,23 +70,24 @@ export function installCalmOperationalUserLayout(): void {
     [key: symbol]: CalmOperationalUserLayoutPatch | undefined;
   };
   const hidesOperationalInput = (): boolean => calmPresentationHides("synthetic-user");
-  const isOperationalInput = (text: string): boolean => {
-    if (!text.includes("\u2063")) return false;
-    return (
-      classifyFirstmateCurrentOperationalText(text) !== undefined ||
-      text.startsWith(LEGACY_CALM_OPERATIONAL_PREFIX)
-    );
+  const operationalKind = (text: string): string | undefined => {
+    if (!text.includes("\u2063")) return undefined;
+    const kind = classifyFirstmateCurrentOperationalText(text);
+    if (kind !== undefined) return kind;
+    return text.startsWith(LEGACY_CALM_OPERATIONAL_PREFIX)
+      ? LEGACY_CALM_OPERATIONAL_KIND
+      : undefined;
   };
   const installed = registry[CALM_OPERATIONAL_USER_LAYOUT_PATCH];
   if (installed) {
     installed.hidesOperationalInput = hidesOperationalInput;
-    installed.isOperationalInput = isOperationalInput;
+    installed.operationalKind = operationalKind;
     return;
   }
 
   const patch: CalmOperationalUserLayoutPatch = {
     hidesOperationalInput,
-    isOperationalInput,
+    operationalKind,
   };
   const InteractiveMode = PiCodingAgent.InteractiveMode;
   if (typeof InteractiveMode !== "function") {
@@ -128,12 +133,13 @@ export function installCalmOperationalUserLayout(): void {
     }
 
     const text = this.getUserMessageText(message);
-    if (!text || !patch.isOperationalInput(text)) {
+    const kind = text ? patch.operationalKind(text) : undefined;
+    if (kind === undefined) {
       originalAddMessageToChat.call(this, message, options);
       return;
     }
 
-    noteCalmUserTurnBoundary(text);
+    noteCalmUserTurnBoundary(kind);
     const component = new CalmOperationalUserMessageComponent(
       text,
       this.getMarkdownThemeWithSettings(),

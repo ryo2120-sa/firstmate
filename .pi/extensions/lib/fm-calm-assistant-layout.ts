@@ -29,6 +29,7 @@ type TrackedAssistantRow = {
   component: object;
   message: AssistantMessage;
   turnId: number;
+  hidWorkingNote: boolean;
 };
 
 type UserMessageLike = {
@@ -133,13 +134,14 @@ const CALM_ASSISTANT_LAYOUT_PATCH = Symbol.for(
 
 // ./fm-calm-operational-user-layout.ts renders Firstmate's operational rows itself and
 // never forwards them to the addMessageToChat wrapper below, so it reports their turn
-// boundary here. Without an installed layout there is no turn to advance.
-export function noteCalmUserTurnBoundary(text: string): void {
+// boundary here, passing the kind it already classified so the row costs one classifier
+// spawn rather than two. Without an installed layout there is no turn to advance.
+export function noteCalmUserTurnBoundary(kind: string | undefined): void {
   const registry = globalThis as typeof globalThis & {
     [key: symbol]: CalmAssistantLayoutPatch | undefined;
   };
   const patch = registry[CALM_ASSISTANT_LAYOUT_PATCH];
-  if (!patch || continuesCurrentTurn(text)) return;
+  if (!patch || kind === TURN_CONTINUING_OPERATIONAL_KIND) return;
   patch.turnId += 1;
 }
 
@@ -194,28 +196,36 @@ export function installCalmAssistantLayout(): void {
     return false;
   };
 
-  const trackRow = (component: object, message: AssistantMessage): void => {
+  const trackRow = (component: object, message: AssistantMessage): TrackedAssistantRow => {
     const existing = patch.rows.find((row) => row.component === component);
     if (existing) {
       existing.message = message;
-      return;
+      return existing;
     }
-    patch.rows.push({ component, message, turnId: patch.turnId });
+    const row: TrackedAssistantRow = {
+      component,
+      message,
+      turnId: patch.turnId,
+      hidWorkingNote: false,
+    };
+    patch.rows.push(row);
+    return row;
   };
+
+  const hidesWorkingNoteFor = (message: AssistantMessage, component: object): boolean =>
+    patch.hidesWorkingNote() &&
+    isMidTurnAssistantMessage(message) &&
+    laterSameTurnHasRealVisibleText(component);
 
   const presentationFor = (
     state: AssistantMessagePresentationState,
     message: AssistantMessage,
-    component: object,
+    hideWorkingNote: boolean,
   ): AssistantMessage => {
     const hideThinking =
       state.hiddenThinkingLabel === "" &&
       state.hideThinkingBlock &&
       patch.hidesThinking();
-    const hideWorkingNote =
-      patch.hidesWorkingNote() &&
-      isMidTurnAssistantMessage(message) &&
-      laterSameTurnHasRealVisibleText(component);
     if (!hideThinking && !hideWorkingNote) return message;
     return {
       ...message,
@@ -233,24 +243,26 @@ export function installCalmAssistantLayout(): void {
   ): void {
     const component = this as object;
     const state = this as unknown as AssistantMessagePresentationState;
-    trackRow(component, message);
-    const presentationMessage = presentationFor(state, message, component);
-    if (isStreaming === undefined) {
-      originalUpdateContent.call(this, presentationMessage);
-    } else {
-      originalUpdateContent.call(this, presentationMessage, isStreaming);
-    }
+    const tracked = trackRow(component, message);
+    const hideWorkingNote = hidesWorkingNoteFor(message, component);
+    const presentationMessage = presentationFor(state, message, hideWorkingNote);
+    originalUpdateContent.call(this, presentationMessage, isStreaming);
     if (presentationMessage !== message) state.lastMessage = message;
+    tracked.hidWorkingNote = hideWorkingNote;
 
     if (applying) return;
     applying = true;
     try {
       const index = patch.rows.findIndex((row) => row.component === component);
       const turnId = index < 0 ? patch.turnId : patch.rows[index].turnId;
+      // Pi rebuilds the whole row from scratch on every updateContent, and it calls this
+      // once per streaming chunk, so an earlier row is worth repainting only when the
+      // decision that collapsed or restored it has actually changed.
       for (let earlier = 0; earlier < index; earlier += 1) {
         const row = patch.rows[earlier];
         if (row.turnId !== turnId) continue;
         if (!isMidTurnAssistantMessage(row.message)) continue;
+        if (hidesWorkingNoteFor(row.message, row.component) === row.hidWorkingNote) continue;
         AssistantMessageComponent.prototype.updateContent.call(row.component, row.message);
       }
     } finally {

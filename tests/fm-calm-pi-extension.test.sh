@@ -1084,6 +1084,24 @@ InteractiveMode.prototype.addMessageToChat.call(
   operationalMode,
   { role: "user", content: legacyAwayMessage },
 );
+// The operational row's kind is classified by a blocking spawn on Pi's render thread, so
+// every consumer of that one answer must share it rather than re-derive it.
+const callsBeforeSingleWake = readFileSync(process.env.FM_OPERATIONAL_INPUT_CALLS, "utf8")
+  .split("\n")
+  .filter(Boolean).length;
+InteractiveMode.prototype.addMessageToChat.call(
+  operationalMode,
+  { role: "user", content: watcherMessage },
+);
+const singleWakeCalls = readFileSync(process.env.FM_OPERATIONAL_INPUT_CALLS, "utf8")
+  .split("\n")
+  .filter(Boolean).length - callsBeforeSingleWake;
+if (singleWakeCalls !== 1) {
+  throw new Error(
+    `one operational row spawned the classifier ${singleWakeCalls} times instead of once`,
+  );
+}
+
 const operationalComponent = operationalChat.children[1];
 const legacyOperationalComponent = operationalChat.children[2];
 const stockOperationalComponent = new UserMessageComponent(watcherMessage, undefined, 1);
@@ -2054,6 +2072,54 @@ if (guardRecapRow.render(100).join("\n").includes("GUARD_TURN_NOTE")) {
 }
 if (!wakeRecapRow.render(100).join("\n").includes("WAKE_TURN_RECAP")) {
   throw new Error("a turn-end-guard follow-up reached back and hid an earlier turn's last recap");
+}
+
+// Pi rebuilds a row from scratch on every updateContent and calls it once per streaming
+// chunk, so the retro pass has to repaint an earlier row only when the decision that
+// collapses or restores it has actually changed.
+const retroNoteRow = trackedAssistantRow("retro note", "toolUse", [
+  { type: "text", text: "RETRO_WORKING_NOTE" },
+  toolCall,
+]).row;
+if (!retroNoteRow.render(100).join("\n").includes("RETRO_WORKING_NOTE")) {
+  throw new Error("Calm collapsed a note that no later same-turn row had superseded yet");
+}
+const patchedUpdateContent = AssistantMessageComponent.prototype.updateContent;
+const repaints = new Map();
+AssistantMessageComponent.prototype.updateContent = function (message, isStreaming) {
+  repaints.set(this, (repaints.get(this) ?? 0) + 1);
+  return patchedUpdateContent.call(this, message, isStreaming);
+};
+try {
+  const retroReplyRow = trackedAssistantRow("retro reply", "pending", [
+    { type: "text", text: "RETRO_REPLY_TEXT" },
+  ]).row;
+  if ((repaints.get(retroNoteRow) ?? 0) !== 1) {
+    throw new Error(
+      `a changed collapse decision repainted the earlier note ${repaints.get(retroNoteRow) ?? 0} times instead of once`,
+    );
+  }
+  if (retroNoteRow.render(100).join("\n").includes("RETRO_WORKING_NOTE")) {
+    throw new Error("the retro pass did not collapse a note a later same-turn reply superseded");
+  }
+
+  repaints.clear();
+  for (let chunk = 1; chunk <= 5; chunk += 1) {
+    retroReplyRow.updateContent(
+      { ...assistantBase, stopReason: "pending", content: [{ type: "text", text: `RETRO_REPLY_TEXT chunk ${chunk}` }] },
+      true,
+    );
+  }
+  if ((repaints.get(retroNoteRow) ?? 0) !== 0) {
+    throw new Error(
+      `streaming a later reply repainted an already-collapsed note ${repaints.get(retroNoteRow)} more times`,
+    );
+  }
+  if (retroNoteRow.render(100).join("\n").includes("RETRO_WORKING_NOTE")) {
+    throw new Error("skipping an unchanged repaint un-hid an already-collapsed note");
+  }
+} finally {
+  AssistantMessageComponent.prototype.updateContent = patchedUpdateContent;
 }
 
 if (!existsSync(calmPreferencePath)) {
