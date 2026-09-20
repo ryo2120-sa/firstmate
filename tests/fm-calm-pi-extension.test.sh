@@ -380,6 +380,126 @@ JS
   pass "a missing collapsed-thinking presentation API degrades only that Calm adapter with a clear skip reason, while the rest of Calm still registers"
 }
 
+test_pi_compat_degraded_turn_tracking_adapter() {
+  local fixture out status
+  if ! command -v node >/dev/null 2>&1 || ! command -v npm >/dev/null 2>&1; then
+    echo "skip: node or npm not found for Pi calm degraded-turn-tracking test"
+    return 0
+  fi
+  if [ ! -f "$PI_PACKAGE_DIR/package.json" ]; then
+    echo "skip: installed @earendil-works/pi-coding-agent package not found"
+    return 0
+  fi
+
+  fixture="$TMP_ROOT/degraded-turn-tracking"
+  mkdir -p \
+    "$fixture/project/.pi/extensions/lib" \
+    "$fixture/project/node_modules/@earendil-works"
+  cp "$EXT" "$fixture/project/.pi/extensions/fm-calm.ts"
+  cp "$ASSISTANT_LAYOUT" "$fixture/project/.pi/extensions/lib/fm-calm-assistant-layout.ts"
+  cp "$OPERATIONAL_USER_LAYOUT" "$fixture/project/.pi/extensions/lib/fm-calm-operational-user-layout.ts"
+  cp "$VISIBILITY" "$fixture/project/.pi/extensions/lib/fm-calm-visibility.ts"
+  cp "$CURSOR_SKILL_LAYOUT" "$fixture/project/.pi/extensions/lib/fm-calm-cursor-skill-layout.ts"
+  cp "$WORKING_SHIP" "$fixture/project/.pi/extensions/lib/fm-calm-working-ship.ts"
+  cp "$PI_OPERATIONAL_INPUT" "$fixture/project/.pi/extensions/lib/fm-operational-input.ts"
+  ln -s "$PI_PACKAGE_DIR" "$fixture/project/node_modules/@earendil-works/pi-coding-agent"
+  ln -s "$PI_PACKAGE_DIR/node_modules/@earendil-works/pi-tui" "$fixture/project/node_modules/@earendil-works/pi-tui"
+  ln -s "$PI_PACKAGE_DIR/node_modules/typebox" "$fixture/project/node_modules/typebox"
+  printf '%s\n' '{"type":"module"}' >"$fixture/project/package.json"
+
+  out=$(cd "$fixture/project" && \
+    EXT="$fixture/project/.pi/extensions/fm-calm.ts" \
+    PI_PACKAGE_DIR="$PI_PACKAGE_DIR" \
+    node --input-type=module 2>&1 <<'JS'
+import { pathToFileURL } from "node:url";
+
+// Turn tracking needs InteractiveMode.addMessageToChat as much as it needs
+// AssistantMessageComponent.updateContent: without it every row would share turn 0 and a
+// previous turn's last recap would be hidden by the next turn's reply. A future Pi that
+// drops it must therefore take the documented diagnosed-skip path, not a silent install.
+const packageRoot = process.env.PI_PACKAGE_DIR;
+const [{ AssistantMessageComponent }, { InteractiveMode }] = await Promise.all([
+  import(
+    pathToFileURL(`${packageRoot}/dist/modes/interactive/components/assistant-message.js`).href
+  ),
+  import(pathToFileURL(`${packageRoot}/dist/modes/interactive/interactive-mode.js`).href),
+]);
+const originalUpdateContent = AssistantMessageComponent.prototype.updateContent;
+const originalAddMessageToChat = InteractiveMode.prototype.addMessageToChat;
+if (typeof originalUpdateContent !== "function" || typeof originalAddMessageToChat !== "function") {
+  throw new Error(
+    "fixture precondition failed: installed Pi lacks the assistant/turn-tracking methods this adapter patches",
+  );
+}
+delete InteractiveMode.prototype.addMessageToChat;
+
+const diagnostics = [];
+const originalConsoleError = console.error;
+console.error = (...args) => diagnostics.push(args.join(" "));
+
+let calmCommand;
+const handlers = new Map();
+const pi = {
+  events: { emit() {}, on() {} },
+  on(event, handler) {
+    handlers.set(event, handler);
+  },
+  registerCommand(name, command) {
+    if (name === "calm") calmCommand = command;
+  },
+  registerEntryRenderer() {},
+  registerTool() {},
+};
+
+let threw = false;
+try {
+  const extension = await import(`${pathToFileURL(process.env.EXT).href}?noturns=${Date.now()}`);
+  extension.default(pi);
+} catch {
+  threw = true;
+}
+console.error = originalConsoleError;
+InteractiveMode.prototype.addMessageToChat = originalAddMessageToChat;
+
+if (threw) {
+  throw new Error(
+    "a missing InteractiveMode.addMessageToChat crashed the whole Calm extension instead of degrading just the adapters that need it",
+  );
+}
+if (!calmCommand || !handlers.has("session_start")) {
+  throw new Error(
+    "Calm command/session lifecycle did not register when the turn-tracking API was unavailable",
+  );
+}
+if (AssistantMessageComponent.prototype.updateContent !== originalUpdateContent) {
+  throw new Error(
+    "the collapsed-thinking adapter patched updateContent without the turn tracking it depends on, which would freeze every row at turn 0 and hide a previous turn's last recap",
+  );
+}
+const sawClearSkipReason = diagnostics.some(
+  (line) =>
+    line.includes("collapsed-thinking") &&
+    line.includes("addMessageToChat") &&
+    /unavailable|skip/i.test(line),
+);
+if (!sawClearSkipReason) {
+  throw new Error(
+    `missing a clear skip reason naming the degraded collapsed-thinking adapter; saw: ${JSON.stringify(diagnostics)}`,
+  );
+}
+if (diagnostics.some((line) => line.includes("cursor-skill-tool"))) {
+  throw new Error(
+    `an adapter that does not use InteractiveMode was skipped too; saw: ${JSON.stringify(diagnostics)}`,
+  );
+}
+JS
+)
+  status=$?
+  [ "$status" -eq 0 ] || fail "Pi calm degraded-turn-tracking path failed: $out"
+  [ -z "$out" ] || fail "Pi calm degraded-turn-tracking test printed output: $out"
+  pass "a missing InteractiveMode.addMessageToChat degrades the collapsed-thinking adapter with a clear skip reason and no half-installed updateContent patch, while unrelated adapters and the rest of Calm still register"
+}
+
 test_pi_compat_missing_adapter_exports() {
   local fixture out status
   if ! command -v node >/dev/null 2>&1; then
@@ -4322,6 +4442,7 @@ JS
 test_home_resolution
 test_pi_compat_no_upper_bound
 test_pi_compat_degraded_adapter
+test_pi_compat_degraded_turn_tracking_adapter
 test_pi_compat_missing_adapter_exports
 test_builtin_gate_load_time
 test_calm_activation_collision_and_regression_bound
