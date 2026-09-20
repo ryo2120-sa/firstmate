@@ -38,7 +38,8 @@ These are supported-API boundaries rather than hidden-content failures.
 
 Calm has no numeric Pi version minimum or maximum and never refuses Pi solely because its version is newer than a previously verified version.
 The collapsed-thinking, operational-user-row, and cursor-skill-tool presentation adapters probe the exact Pi API seam they patch when Calm loads.
-If Pi removes one of those seams, Calm logs a diagnostic naming the unavailable adapter and skips only that adapter; `/calm`, the other adapter, and unrelated Pi extensions remain available.
+If Pi removes one of those seams, Calm logs a diagnostic naming each adapter that probed it and skips only those adapters; `/calm`, the remaining adapters, and unrelated Pi extensions remain available.
+The collapsed-thinking and operational-user-row adapters both probe `InteractiveMode.addMessageToChat`, so a Pi that drops that one method skips both of them, each with its own diagnostic.
 
 Calm's built-in tool presentation (`bash`, `read`, `edit`, `write`, `grep`, `find`, `ls`) shares Pi's single, unmerged override slot per name with any other extension that overrides the same tool.
 While the persisted Calm preference is off, Calm registers none of those overrides and therefore contests no built-in tool name.

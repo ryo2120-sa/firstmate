@@ -8,8 +8,9 @@
 // itself, model context, session storage, and export rendering are never touched.
 // A working note is hidden only when a later same-turn assistant message has real
 // visible text; replay, lifecycle, incomplete, empty, and tools-only rows do not
-// count, so the last recap stays visible. ./fm-calm-visibility.ts owns which classes
-// Calm hides.
+// count, so the last recap stays visible. Every user message opens a new turn except a
+// turn-end-guard follow-up, which finishes the turn it interrupted.
+// ./fm-calm-visibility.ts owns which classes Calm hides.
 import type { AssistantMessageComponent as PiAssistantMessageComponent } from "@earendil-works/pi-coding-agent";
 import * as PiCodingAgent from "@earendil-works/pi-coding-agent";
 import { classifyFirstmateCurrentOperationalText } from "./fm-operational-input.ts";
@@ -45,8 +46,6 @@ type CalmAssistantLayoutPatch = {
   turnId: number;
   rows: TrackedAssistantRow[];
 };
-
-const LEGACY_CALM_OPERATIONAL_PREFIX = "\u2063Supervisor escalate (";
 
 // A mid-turn assistant message is one the model did not end its response with: Pi's
 // agent loop runs its tool calls and then issues another assistant message. stopReason
@@ -107,18 +106,23 @@ function userMessageText(message: UserMessageLike): string {
     .join("");
 }
 
-function isOperationalUserText(text: string): boolean {
+// Firstmate's operational inputs arrive as ordinary user messages, and all but one open
+// a new logical turn: a watcher wake, an away-supervisor escalation, and a
+// from-firstmate message each drive a fresh captain response, so the recap that ended
+// the previous turn has to survive the reply to them. turn-end-guard is the exception,
+// sent from agent_settled to finish the turn that just tried to end, so its reply
+// belongs to that same turn. Ordinary captain text carries no operational marker and
+// never pays for the classifier.
+const TURN_CONTINUING_OPERATIONAL_KIND = "turn-end-guard";
+
+function continuesCurrentTurn(text: string): boolean {
   if (!text.includes("\u2063")) return false;
-  return (
-    classifyFirstmateCurrentOperationalText(text) !== undefined ||
-    text.startsWith(LEGACY_CALM_OPERATIONAL_PREFIX)
-  );
+  return classifyFirstmateCurrentOperationalText(text) === TURN_CONTINUING_OPERATIONAL_KIND;
 }
 
-function isGenuineUserTurnBoundary(message: UserMessageLike): boolean {
+function isUserTurnBoundary(message: UserMessageLike): boolean {
   if (message.role !== "user") return false;
-  const text = userMessageText(message);
-  return text.length > 0 && !isOperationalUserText(text);
+  return !continuesCurrentTurn(userMessageText(message));
 }
 
 // Keep the introduction-version symbol stable so a compatible upgrade cannot
@@ -126,6 +130,18 @@ function isGenuineUserTurnBoundary(message: UserMessageLike): boolean {
 const CALM_ASSISTANT_LAYOUT_PATCH = Symbol.for(
   "firstmate:calm-assistant-layout:pi-0.81.1",
 );
+
+// ./fm-calm-operational-user-layout.ts renders Firstmate's operational rows itself and
+// never forwards them to the addMessageToChat wrapper below, so it reports their turn
+// boundary here. Without an installed layout there is no turn to advance.
+export function noteCalmUserTurnBoundary(text: string): void {
+  const registry = globalThis as typeof globalThis & {
+    [key: symbol]: CalmAssistantLayoutPatch | undefined;
+  };
+  const patch = registry[CALM_ASSISTANT_LAYOUT_PATCH];
+  if (!patch || continuesCurrentTurn(text)) return;
+  patch.turnId += 1;
+}
 
 export function installCalmAssistantLayout(): void {
   const registry = globalThis as typeof globalThis & {
@@ -246,7 +262,7 @@ export function installCalmAssistantLayout(): void {
     message: UserMessageLike,
     options?: unknown,
   ) {
-    if (isGenuineUserTurnBoundary(message)) patch.turnId += 1;
+    if (isUserTurnBoundary(message)) patch.turnId += 1;
     return originalAddMessageToChat.call(this, message, options);
   };
 

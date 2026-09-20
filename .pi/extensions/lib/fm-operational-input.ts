@@ -46,7 +46,9 @@ function operationalInputAnswer(
   stdout: string,
 ): string | undefined {
   if (status !== 0) return undefined;
-  return command === "classify" ? stdout.replace(/\n$/, "") : stdout;
+  // encode is the only command whose output is a payload rather than a one-line
+  // answer, so it is the only one that must keep stdout byte for byte.
+  return command === "encode" ? stdout : stdout.replace(/\n$/, "");
 }
 
 function runOperationalInputCommand(

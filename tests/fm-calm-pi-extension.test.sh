@@ -1666,7 +1666,7 @@ test_calm_mid_turn_working_notes() {
   printf '%s\n' '{"type":"module"}' >"$fixture/package.json"
 
   output_file="$fixture/node-output"
-  (cd "$fixture" && EXT="$fixture/fm-calm.ts" FM_HOME="$fixture/home" PI_PACKAGE_DIR="$PI_PACKAGE_DIR" node --input-type=module) >"$output_file" 2>&1 <<'JS'
+  (cd "$fixture" && EXT="$fixture/fm-calm.ts" FM_HOME="$fixture/home" FM_OPERATIONAL_INPUT_SCRIPT="$OPERATIONAL_INPUT" PI_PACKAGE_DIR="$PI_PACKAGE_DIR" node --input-type=module) >"$output_file" 2>&1 <<'JS'
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { pathToFileURL } from "node:url";
 
@@ -1978,6 +1978,84 @@ if (!laterReplyRow.render(100).join("\n").includes("LATER_REAL_REPLY")) {
 if (!lastRecapRow.render(100).join("\n").includes("LAST_RECAP_TEXT")) {
   throw new Error("a later turn hid the previous turn's last recap");
 }
+
+// Firstmate's operational inputs arrive as ordinary user messages that the
+// operational-user adapter renders itself and never forwards, so the turn boundary has
+// to be reported rather than observed on the way past. A watcher wake opens a new turn,
+// which is what keeps the recap that ended the previous turn on screen; a turn-end-guard
+// follow-up finishes the turn it interrupted, so that turn's notes still collapse.
+const operationalInput = await import(pathToFileURL(`${process.cwd()}/lib/fm-operational-input.ts`).href);
+const { InteractiveMode: OperationalInteractiveMode } = await import("@earendil-works/pi-coding-agent");
+const operationalChat = {
+  children: [],
+  addChild(component) {
+    this.children.push(component);
+  },
+};
+const operationalMode = {
+  chatContainer: operationalChat,
+  editor: { addToHistory() {} },
+  getMarkdownTransformers: () => [],
+  getMarkdownThemeWithSettings: () => undefined,
+  getUserMessageText: (message) => typeof message.content === "string" ? message.content : "",
+  outputPad: 1,
+};
+const deliverOperational = (kind, body) => {
+  const content = operationalInput.encodeFirstmateOperationalInput(kind, body);
+  const before = operationalChat.children.length;
+  OperationalInteractiveMode.prototype.addMessageToChat.call(
+    operationalMode,
+    { role: "user", content },
+  );
+  if (operationalChat.children.length !== before + 1) {
+    throw new Error(`the ${kind} follow-up never reached Calm's operational-user row`);
+  }
+};
+const trackedAssistantRow = (label, stopReason, content) => {
+  const row = new AssistantMessageComponent({ ...assistantBase, stopReason, content }, true);
+  components.push(row);
+  return { label, row };
+};
+
+const wakeRecapRow = trackedAssistantRow("wake recap", "toolUse", [
+  { type: "text", text: "WAKE_TURN_RECAP" },
+  toolCall,
+]).row;
+if (!wakeRecapRow.render(100).join("\n").includes("WAKE_TURN_RECAP")) {
+  throw new Error("Calm hid a recap that no later same-turn row had superseded");
+}
+deliverOperational(
+  "watcher",
+  "FIRSTMATE WATCHER WAKE: signal: /tmp/mid-turn-probe.status\n\nRun bin/fm-wake-drain.sh first.",
+);
+const wakeReplyRow = trackedAssistantRow("wake reply", "stop", [
+  { type: "text", text: "WAKE_REPLY_TEXT" },
+]).row;
+if (!wakeReplyRow.render(100).join("\n").includes("WAKE_REPLY_TEXT")) {
+  throw new Error("Calm hid the reply a watcher wake produced");
+}
+if (!wakeRecapRow.render(100).join("\n").includes("WAKE_TURN_RECAP")) {
+  throw new Error("a background watcher wake let the next reply hide the previous turn's last recap");
+}
+
+const guardRecapRow = trackedAssistantRow("guard recap", "toolUse", [
+  { type: "text", text: "GUARD_TURN_NOTE" },
+  toolCall,
+]).row;
+deliverOperational("turn-end-guard", "TURN WOULD END BLIND - supervision is off.");
+const guardReplyRow = trackedAssistantRow("guard reply", "stop", [
+  { type: "text", text: "GUARD_REPLY_TEXT" },
+]).row;
+if (!guardReplyRow.render(100).join("\n").includes("GUARD_REPLY_TEXT")) {
+  throw new Error("Calm hid the reply a turn-end guard produced");
+}
+if (guardRecapRow.render(100).join("\n").includes("GUARD_TURN_NOTE")) {
+  throw new Error("a turn-end-guard follow-up was treated as a new turn, leaving a superseded note visible");
+}
+if (!wakeRecapRow.render(100).join("\n").includes("WAKE_TURN_RECAP")) {
+  throw new Error("a turn-end-guard follow-up reached back and hid an earlier turn's last recap");
+}
+
 if (!existsSync(calmPreferencePath)) {
   throw new Error("Calm stopped persisting its preference file");
 }
@@ -1986,7 +2064,7 @@ JS
   out=$(cat "$output_file")
   [ "$status" -eq 0 ] || fail "Pi calm mid-turn contract failed: $out"
   [ -z "$out" ] || fail "Pi calm mid-turn test printed output: $out"
-  pass "Pi calm on collapses superseded mid-turn working notes, keeps the last recap when later rows are replay/lifecycle/incomplete or tools-only, leaves streaming, truncated-final, and genuine final replies untouched, never mutates the messages, ignores every /calm argument, and restores a legacy persisted max as ordinary Calm on"
+  pass "Pi calm on collapses superseded mid-turn working notes, keeps the last recap when later rows are replay/lifecycle/incomplete or tools-only or when a background watcher wake opens the next turn while a turn-end-guard follow-up continues the current one, leaves streaming, truncated-final, and genuine final replies untouched, never mutates the messages, ignores every /calm argument, and restores a legacy persisted max as ordinary Calm on"
 }
 
 test_operational_followup_turn_e2e() {

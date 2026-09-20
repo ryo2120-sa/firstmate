@@ -2,9 +2,11 @@
 // together via InteractiveMode.addMessageToChat. This adapter probes that exact method
 // and throws if it is missing; fm-calm.ts catches that and skips only this adapter with a
 // diagnostic instead of blocking Calm or Pi. It changes only that presentation and never
-// message delivery.
+// message delivery. Because it renders these rows itself instead of forwarding them, it
+// reports their turn boundary to ./fm-calm-assistant-layout.ts, which owns that count.
 import type { UserMessageComponent as PiUserMessageComponent } from "@earendil-works/pi-coding-agent";
 import * as PiCodingAgent from "@earendil-works/pi-coding-agent";
+import { noteCalmUserTurnBoundary } from "./fm-calm-assistant-layout.ts";
 import { calmPresentationHides } from "./fm-calm-visibility.ts";
 import { classifyFirstmateCurrentOperationalText } from "./fm-operational-input.ts";
 
@@ -131,6 +133,7 @@ export function installCalmOperationalUserLayout(): void {
       return;
     }
 
+    noteCalmUserTurnBoundary(text);
     const component = new CalmOperationalUserMessageComponent(
       text,
       this.getMarkdownThemeWithSettings(),
