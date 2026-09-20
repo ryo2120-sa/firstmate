@@ -134,14 +134,11 @@ CAPS
 
 # Cancellation makes an undersized cap costlier: a falsely tripped job now also
 # discards a run nobody replaced. These bounds were measured, not guessed.
-# tests-portable-parallel-1/2 were widened from 10 to 15 minutes on
-# 2026-09-20, measured from JOB wall time (not test-step time, which omits
-# checkout/setup/upload overhead): across six consecutive green runs that
-# day (35521389413, 35522119589, 35525714064, 35527851430, 35530147547,
-# 35530818396), shard 1's worst observed job reached the full 10m00s
-# against the prior 10-minute cap (run 35527851430), leaving only seconds
-# of real margin. This must fail against that prior 10-minute value, not
-# just assert the field is present.
+# tests-portable-parallel-1 was widened from 10 to 15 minutes on 2026-09-20
+# (evidence and provenance: the job comment in .github/workflows/ci.yml).
+# This must fail against that prior 10-minute value, not just assert the
+# field is present. tests-portable-parallel-2 stays at 10: its measured job
+# wall time left comfortable margin, so it is not widened.
 test_measured_lanes_keep_their_existing_bounds() {
   local job expected actual
   while read -r job expected; do
@@ -151,12 +148,12 @@ test_measured_lanes_keep_their_existing_bounds() {
       || fail "$job timeout must stay $expected minutes, got $actual"
   done <<'CAPS'
 tests-portable-parallel-1 15
-tests-portable-parallel-2 15
+tests-portable-parallel-2 10
 tests-portable-serial 30
 tests-herdr 75
 macos-stock-bash 10
 CAPS
-  pass "the already-measured lane bounds are unchanged, including the widened portable parallel headroom"
+  pass "the already-measured lane bounds hold, including shard 1's widened cap"
 }
 
 test_pr_pushes_supersede_within_one_pr
