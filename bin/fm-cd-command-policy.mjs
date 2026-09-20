@@ -67,31 +67,17 @@ function resolvedDirectory(candidate) {
 // no-op `cd`, and blocking it aborts the tool before any result is returned.
 function destinationIsHome(home, destination) {
   if (!home || !destination) return false;
-  if (destination === "-" || destination.startsWith("~")) return false;
+  if (destination.startsWith("~")) return false;
   const homeDir = resolvedDirectory(home);
   const target = path.resolve(homeDir, destination);
   return resolvedDirectory(target) === homeDir;
 }
 
 function cdDestination(position, commandIndex) {
-  const words = position.words;
-  let index = commandIndex + 1;
-  while (words[index]) {
-    const value = words[index].value;
-    if (value === "-L" || value === "-P" || value === "-e") {
-      index += 1;
-      continue;
-    }
-    if (value === "--") {
-      index += 1;
-      break;
-    }
-    if (value.startsWith("-") && value !== "-") return null;
-    break;
-  }
-  const destination = words[index];
+  const destination = position.words[commandIndex + 1];
   if (!destination) return null;
   if (!destination.literal || destination.unquotedExpansion) return null;
+  if (destination.value.startsWith("-")) return null;
   return destination.value;
 }
 
@@ -165,10 +151,6 @@ function parseArguments(argv) {
     if (name.startsWith("--command=")) {
       result.command = name.slice("--command=".length);
       result.commandSet = true;
-      continue;
-    }
-    if (name.startsWith("--home=")) {
-      result.home = name.slice("--home=".length);
       continue;
     }
     throw new Error(`unknown argument: ${name}`);

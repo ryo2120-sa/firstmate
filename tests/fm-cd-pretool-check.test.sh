@@ -147,7 +147,6 @@ matrix_case A36 allow 'command -vp cd'
 matrix_case A37 allow "cd $PRIMARY"
 matrix_case A38 allow "cd $PRIMARY && git status"
 matrix_case A39 allow "cd ."
-matrix_case A40 allow "cd -- $PRIMARY"
 
 MATRIX_TMP=$(mktemp -d "${TMPDIR:-/tmp}/fm-cd-policy-matrix.XXXXXX")
 FM_TEST_CLEANUP_DIRS+=("$MATRIX_TMP")

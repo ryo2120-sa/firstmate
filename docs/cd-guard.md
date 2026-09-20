@@ -16,7 +16,8 @@ That has actually happened: a persistent top-level `cd` caused a firstmate-owned
 The seatbelt denies exactly that command shape - a cwd change that persists to the primary shell - before it runs.
 
 This guard is not a general sandbox.
-It classifies shell command positions only; it never evaluates, expands, sources, or runs any byte of the submitted command.
+It never evaluates, expands, sources, or runs any byte of the submitted command.
+It classifies lexical shell command positions, and may filesystem-resolve a literal `cd` destination (`existsSync`/`realpathSync`) to compare it against the primary checkout path, so a no-op return-to-home `cd` can be allowed.
 Its threat model is agent mistakes, the same as the watcher-arm seatbelt: an accidental bare `cd projects/foo`, not a deliberately obfuscated bypass.
 
 ## Scope: plain firstmate checkouts only
@@ -86,6 +87,9 @@ It does not permit `cd /elsewhere`, because that remains a persistent directory 
 - OpenCode sends the exact command string through `--command <exact string>`.
 - Pi, pi-signed, and omp send the exact command string through `--command <exact string>`.
 - Cursor sends stdin JSON at `.tool_input.command` and adds `--cursor`, which renders the deny as Cursor's own returned decision object.
+
+Every entry shape also passes `--home "$FM_ROOT"`, the resolved primary checkout, which is what lets the policy allow a literal `cd` back to the home.
+The policy CLI denies every top-level `cd` when `--home` is absent, so a transport that forgets the flag fails toward the pre-existing block rather than toward an allow.
 
 Processing order is cheapest-first: a strict-superset prefilter, then the primary-checkout scope, then the Node policy owner.
 The prefilter removes ordinary single quotes, double quotes, backslashes, carriage returns, and newlines before fast-allowing any command that carries no `cd`, `pushd`, or `popd` substring and no quoting-decoder marker (`$'` ANSI-C or `$"` locale), so quoted or escaped command-word fragments delegate to the policy while most commands never pay for the git scoping calls or the Node process.
