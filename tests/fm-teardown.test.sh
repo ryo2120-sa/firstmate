@@ -2100,7 +2100,13 @@ SH
   [ -e "$ready" ] || fail "herdr-orphan-refusal: the contending lock holder never started"
 
   rc=0
+  # The asserted contract (nothing changed, visible refusal, no unlocked pane
+  # close) does not depend on the wait length, so a small injected budget
+  # proves it without paying the full production wait (precedent:
+  # FM_BACKEND_HERDR_IDLE_SHELL_PROOF_POLLS in
+  # tests/fm-backend-herdr-focus-flash-e2e.test.sh).
   FM_FAKE_HERDR_LOG="$log" FM_FAKE_HERDR_CLOSED="$closed" \
+    FM_BACKEND_HERDR_PRESENTATION_LOCK_WAIT_ATTEMPTS=50 \
     run_teardown "$case_dir" --force > "$case_dir/stdout" 2> "$case_dir/stderr" || rc=$?
   if [ "$rc" -eq 0 ]; then
     : > "$release"; wait "$holder_pid" 2>/dev/null || true

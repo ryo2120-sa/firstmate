@@ -2856,7 +2856,7 @@ teardown_herdr_require_prerequisites() {  # <task-id>
 }
 
 teardown_herdr_preflight_target() {  # <target> <task-id>
-  local target=$1 task_id=$2 session pane presence lock_path verified_lock_path lock_session held_path attempt
+  local target=$1 task_id=$2 session pane presence lock_path verified_lock_path lock_session held_path attempt max_attempts
   teardown_herdr_require_prerequisites "$task_id" || return 1
   if ! fm_backend_herdr_parse_target "$target"; then
     echo "error: herdr endpoint $target for $task_id could not be parsed exactly; nothing was changed - repair the endpoint metadata and rerun teardown" >&2
@@ -2890,7 +2890,13 @@ $TEARDOWN_HERDR_LOCK_RECORDS
 FMEOF
   fi
   attempt=0
-  while [ "$attempt" -lt 50 ]; do
+  # fm_backend_herdr_presentation_lock_wait_attempts (bin/backends/herdr.sh) is
+  # the single owner of this shared lock's wait budget; a peer spawn can
+  # legitimately hold the lock across its own bounded worktree-settle wait, so
+  # this waiter must outlast that hold instead of refusing while it is merely
+  # in progress.
+  max_attempts=$(fm_backend_herdr_presentation_lock_wait_attempts)
+  while [ "$attempt" -lt "$max_attempts" ]; do
     if fm_lock_try_acquire "$lock_path"; then
       if ! verified_lock_path=$(fm_backend_herdr_presentation_session_lock_path "$session") \
         || [ "$verified_lock_path" != "$lock_path" ]; then

@@ -2850,7 +2850,8 @@ test_kill_refuses_when_presentation_lock_is_unavailable() {
   for mode in unresolved contended; do
     : > "$dir/cli.log"
     : > "$dir/attempts"
-    out=$(ROOT="$ROOT" MODE="$mode" CLI_LOG="$dir/cli.log" ATTEMPTS="$dir/attempts" bash -c '
+    out=$(ROOT="$ROOT" MODE="$mode" CLI_LOG="$dir/cli.log" ATTEMPTS="$dir/attempts" \
+      FM_BACKEND_HERDR_PRESENTATION_LOCK_WAIT_ATTEMPTS=50 bash -c '
       . "$ROOT/bin/backends/herdr.sh"
       fm_backend_herdr_target_ready() { fm_backend_herdr_parse_target "$1"; }
       fm_backend_herdr_presentation_session_lock_path() {
@@ -2875,7 +2876,7 @@ test_kill_refuses_when_presentation_lock_is_unavailable() {
       "$mode presentation lock refusal did not report the deferred close"
     attempts=$(wc -l < "$dir/attempts" | tr -d ' ')
     if [ "$mode" = contended ]; then
-      [ "$attempts" = 50 ] || fail "contended presentation lock did not use the bounded wait: $attempts attempts"
+      [ "$attempts" = 50 ] || fail "contended presentation lock did not use the injected bounded wait: $attempts attempts"
     else
       [ "$attempts" = 0 ] || fail "unresolved presentation lock path attempted acquisition: $attempts"
     fi
