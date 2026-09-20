@@ -104,6 +104,10 @@ matrix_case B24 deny 'command builtin cd projects/foo'
 matrix_case B25 deny 'builtin command cd projects/foo'
 matrix_case B26 deny 'command -p cd projects/foo'
 matrix_case B27 deny 'command -- cd projects/foo'
+matrix_case B28 deny "cd $PRIMARY && cd projects/foo"
+matrix_case B29 deny "pushd $PRIMARY"
+matrix_case B30 deny 'cd .'
+matrix_case B31 deny "cd -- $PRIMARY"
 
 # ALLOW: not a persistent top-level cwd change (scoped, data, or non-cd).
 matrix_case A01 allow 'git -C projects/foo status'
@@ -142,6 +146,8 @@ matrix_case A33 allow 'command -v cd'
 matrix_case A34 allow 'command -V cd'
 matrix_case A35 allow 'command -pv cd'
 matrix_case A36 allow 'command -vp cd'
+matrix_case A37 allow "cd $PRIMARY"
+matrix_case A38 allow "cd $PRIMARY && git status"
 
 MATRIX_TMP=$(mktemp -d "${TMPDIR:-/tmp}/fm-cd-policy-matrix.XXXXXX")
 FM_TEST_CLEANUP_DIRS+=("$MATRIX_TMP")
@@ -368,7 +374,34 @@ test_policy_cli_direct() {
     || fail "policy CLI must allow a subshell-local cd"
   [ "$(node "$policy")" = allow ] \
     || fail "policy CLI must allow when no command is supplied"
+  [ "$(node "$policy" --command "cd $PRIMARY" | cut -f1)" = deny ] \
+    || fail "policy CLI without --home must still deny a top-level cd"
+  [ "$(node "$policy" --command "cd $PRIMARY" --home "$PRIMARY")" = allow ] \
+    || fail "policy CLI must allow a literal cd to --home"
+  [ "$(node "$policy" --command "cd $PRIMARY && git status" --home "$PRIMARY")" = allow ] \
+    || fail "policy CLI must allow a Cursor-style home cd prefix"
+  [ "$(node "$policy" --command "cd $PRIMARY && cd projects/foo" --home "$PRIMARY" | cut -f1)" = deny ] \
+    || fail "policy CLI must still deny a later persistent cd away from home"
   pass "cd-guard: fm-cd-command-policy.mjs CLI honors the deny/allow output contract"
+}
+
+test_cursor_home_prefix_completes() {
+  local out_file err_file rc payload
+  out_file="$TMP_ROOT/cursor-home.out"
+  err_file="$TMP_ROOT/cursor-home.err"
+  payload=$(jq -cn --arg command "cd $PRIMARY && git status" '{tool_name:"Shell",tool_input:{command:$command}}')
+  printf '%s' "$payload" | "$CHECK" --cursor >"$out_file" 2>"$err_file"
+  rc=$?
+  expect_code 0 "$rc" "Cursor home-prefix cd must complete as allow"
+  [ ! -s "$out_file" ] || fail "Cursor home-prefix allow must leave stdout empty: $(cat "$out_file")"
+  [ ! -s "$err_file" ] || fail "Cursor home-prefix allow must leave stderr empty: $(cat "$err_file")"
+  payload=$(jq -cn --arg command 'cd projects/foo' '{tool_name:"Shell",tool_input:{command:$command}}')
+  printf '%s' "$payload" | "$CHECK" --cursor >"$out_file" 2>"$err_file"
+  rc=$?
+  expect_code 0 "$rc" "Cursor deny still exits 0 with a decision object"
+  jq -e '.permission == "deny" and (.user_message | test("\\[persistent-cd\\]"))' "$out_file" >/dev/null 2>&1 \
+    || fail "Cursor leave-home cd must still deny: $(cat "$out_file")"
+  pass "cd-guard: Cursor home-prefix cd allows; leave-home cd still denies"
 }
 
 # --- per-harness wiring -----------------------------------------------------
@@ -397,4 +430,5 @@ test_fail_open_missing_node
 test_fail_open_missing_jq_on_stdin
 test_prefilter_skips_node_without_cd_substring
 test_policy_cli_direct
+test_cursor_home_prefix_completes
 test_scripts_are_shellcheck_clean

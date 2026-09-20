@@ -12,11 +12,14 @@
 // The shell tokenizer and command-position analysis are imported from
 // bin/fm-arm-command-policy.mjs, the sole owner of firstmate's shell
 // classification, so this guard never duplicates shell lexing. This policy
-// never evaluates, expands, sources, or runs any byte of the submitted command;
-// it inspects lexical command positions only.
+// never expands, sources, or runs any byte of the submitted command.
+// It inspects lexical command positions, and may compare a literal `cd`
+// destination to the primary checkout path so a no-op return-to-home `cd`
+// can be allowed.
 
 import { Lexer, splitProgram, commandPosition } from "./fm-arm-command-policy.mjs";
-import { realpathSync } from "node:fs";
+import path from "node:path";
+import { existsSync, realpathSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 
 const REASONS = {
@@ -50,6 +53,34 @@ function deny(code) {
   return { decision: "deny", code, reason: REASONS[code] };
 }
 
+function resolvedDirectory(candidate) {
+  try {
+    if (existsSync(candidate)) return realpathSync(candidate);
+  } catch {
+    // Fall through to lexical normalization when the path cannot be read.
+  }
+  return path.resolve(candidate);
+}
+
+// A top-level `cd` to the absolute path of the primary checkout itself does not
+// leave the home. Cursor and similar wrappers prefix every shell with that
+// no-op `cd`, and blocking it aborts the tool before any result is returned.
+// A relative destination is never matched: this policy does not know the
+// shell's cwd, so it cannot tell where a relative `cd` would actually land.
+function destinationIsHome(home, destination) {
+  if (!home || !destination) return false;
+  if (!path.isAbsolute(destination)) return false;
+  return resolvedDirectory(destination) === resolvedDirectory(home);
+}
+
+function cdDestination(position, commandIndex) {
+  const destination = position.words[commandIndex + 1];
+  if (!destination) return null;
+  if (!destination.literal || destination.unquotedExpansion) return null;
+  if (destination.value.startsWith("-")) return null;
+  return destination.value;
+}
+
 function hasPathQualifiedCommandPrefix(position) {
   return position.words
     .slice(position.prefixAssignments, position.index)
@@ -68,7 +99,7 @@ function hasCommandQueryPrefix(position) {
   return false;
 }
 
-function decision(command) {
+function decision(command, home = "") {
   const lexed = new Lexer(command).tokenize();
   // Fail open on syntax this classifier cannot tokenize. The cd-guard's threat
   // model is agent mistakes - an accidental bare `cd projects/foo` always
@@ -94,19 +125,26 @@ function decision(command) {
     if (!command) continue;
     if (!CD_BUILTINS.has(command.value)) continue;
     if (position.wrappers.some((wrapper) => FORKING_WRAPPERS.has(wrapper))) continue;
+    if (command.value === "cd" && destinationIsHome(home, cdDestination(position, wordIndex))) {
+      continue;
+    }
     return deny("persistent-cd");
   }
   return { decision: "allow" };
 }
 
 function parseArguments(argv) {
-  const result = { command: "", commandSet: false };
+  const result = { command: "", commandSet: false, home: "" };
   for (let i = 0; i < argv.length; i += 1) {
     const name = argv[i];
-    if (name === "--command") {
-      if (i + 1 >= argv.length) throw new Error("--command requires a value");
-      result.command = argv[i + 1];
-      result.commandSet = true;
+    if (name === "--command" || name === "--home") {
+      if (i + 1 >= argv.length) throw new Error(`${name} requires a value`);
+      if (name === "--command") {
+        result.command = argv[i + 1];
+        result.commandSet = true;
+      } else {
+        result.home = argv[i + 1];
+      }
       i += 1;
       continue;
     }
@@ -137,7 +175,7 @@ if (invokedDirectly()) {
     if (!args.commandSet || !args.command) {
       process.stdout.write("allow\n");
     } else {
-      const result = decision(args.command);
+      const result = decision(args.command, args.home);
       if (result.decision === "allow") {
         process.stdout.write("allow\n");
       } else {
