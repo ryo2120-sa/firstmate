@@ -29,8 +29,8 @@ export const CALM_TRANSCRIPT_CLASSES = [
 
 export type CalmTranscriptClass = (typeof CALM_TRANSCRIPT_CLASSES)[number];
 
-// Calm is on or off. "assistant-working-note" is deliberately absent from the allowlist:
-// Calm hides mid-turn assistant working notes, keeping the genuine final reply.
+// Calm is on or off. "assistant-working-note" is deliberately absent from the allowlist.
+// ./fm-calm-assistant-layout.ts owns when that class is hidden.
 const CALM_VISIBLE_CLASSES = new Set<CalmTranscriptClass>([
   "genuine-user-prompt",
   "genuine-agent-response",
@@ -84,6 +84,18 @@ export function calmPresentationIsActive(): boolean {
 
 export function calmPresentationHides(itemClass: CalmTranscriptClass): boolean {
   return calm && !stockExportRendering && !calmTranscriptClassIsVisible(itemClass);
+}
+
+const CALM_HIDDEN_CUSTOM_TOOL_NAMES = new Set([
+  "cursor_activate_skill",
+  "pi__cursor_activate_skill",
+]);
+
+export function calmHidesNamedToolRow(toolName: string): boolean {
+  if (!CALM_HIDDEN_CUSTOM_TOOL_NAMES.has(toolName)) return false;
+  return (
+    calmPresentationHides("assistant-tool-call") || calmPresentationHides("tool-result")
+  );
 }
 
 export function registerFirstmateSyntheticPresentation(pi: ExtensionAPI): void {

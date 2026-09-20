@@ -5,12 +5,17 @@
 // This layout removes collapsed thinking and the mid-turn assistant text blocks
 // classified as "assistant-working-note" from a shallow presentation copy. The message
 // itself, model context, session storage, and export rendering are never touched.
-// ./fm-calm-visibility.ts owns which classes Calm hides.
+// A working note is hidden only when a later same-turn assistant message has real
+// visible text; replay, lifecycle, incomplete, empty, and tools-only rows do not
+// count, so the last recap stays visible. ./fm-calm-visibility.ts owns which classes
+// Calm hides.
 import type { AssistantMessageComponent as PiAssistantMessageComponent } from "@earendil-works/pi-coding-agent";
 import * as PiCodingAgent from "@earendil-works/pi-coding-agent";
+import { classifyFirstmateCurrentOperationalText } from "./fm-operational-input.ts";
 import { calmPresentationHides } from "./fm-calm-visibility.ts";
 
 type AssistantMessage = Parameters<PiAssistantMessageComponent["updateContent"]>[0];
+type AssistantContent = AssistantMessage["content"][number];
 
 type AssistantMessagePresentationState = {
   hiddenThinkingLabel: string;
@@ -18,10 +23,25 @@ type AssistantMessagePresentationState = {
   lastMessage?: AssistantMessage;
 };
 
+type TrackedAssistantRow = {
+  component: object;
+  message: AssistantMessage;
+  turnId: number;
+};
+
+type UserMessageLike = {
+  role?: string;
+  content?: unknown;
+};
+
 type CalmAssistantLayoutPatch = {
   hidesThinking: () => boolean;
   hidesWorkingNote: () => boolean;
+  turnId: number;
+  rows: TrackedAssistantRow[];
 };
+
+const LEGACY_CALM_OPERATIONAL_PREFIX = "\u2063Supervisor escalate (";
 
 // A mid-turn assistant message is one the model did not end its response with: Pi's
 // agent loop runs its tool calls and then issues another assistant message. stopReason
@@ -35,6 +55,65 @@ function isMidTurnAssistantMessage(message: AssistantMessage): boolean {
     message.stopReason === "length" &&
     message.content.some((block) => block.type === "toolCall")
   );
+}
+
+function contentText(block: AssistantContent): string {
+  if (block.type !== "text") return "";
+  return block.text.trim();
+}
+
+function lineIsReplayLifecycleOrIncomplete(line: string): boolean {
+  const text = line.trim();
+  if (!text) return true;
+  if (/^cursor-replay-\S+$/i.test(text)) return true;
+  if (/^Cursor (shell|edit|activity) did not complete\.?$/i.test(text)) return true;
+  if (/^missing completion$/i.test(text)) return true;
+  if (/^Tool (call|result|error) \(Cursor\b/i.test(text)) return true;
+  return false;
+}
+
+function textIsReplayLifecycleOrIncomplete(text: string): boolean {
+  return text.split(/\r?\n/).every(lineIsReplayLifecycleOrIncomplete);
+}
+
+function hasRealVisibleText(message: AssistantMessage): boolean {
+  const texts = message.content.map(contentText).filter((text) => text.length > 0);
+  if (texts.length === 0) return false;
+  return texts.some((text) => !textIsReplayLifecycleOrIncomplete(text));
+}
+
+function userMessageText(message: UserMessageLike): string {
+  const content = message.content;
+  if (typeof content === "string") return content;
+  if (!Array.isArray(content)) return "";
+  return content
+    .map((block) => {
+      if (typeof block === "string") return block;
+      if (
+        typeof block === "object" &&
+        block !== null &&
+        (block as { type?: unknown }).type === "text" &&
+        typeof (block as { text?: unknown }).text === "string"
+      ) {
+        return (block as { text: string }).text;
+      }
+      return "";
+    })
+    .join("");
+}
+
+function isOperationalUserText(text: string): boolean {
+  if (!text.includes("\u2063")) return false;
+  return (
+    classifyFirstmateCurrentOperationalText(text) !== undefined ||
+    text.startsWith(LEGACY_CALM_OPERATIONAL_PREFIX)
+  );
+}
+
+function isGenuineUserTurnBoundary(message: UserMessageLike): boolean {
+  if (message.role !== "user") return false;
+  const text = userMessageText(message);
+  return text.length > 0 && !isOperationalUserText(text);
 }
 
 // Keep the introduction-version symbol stable so a compatible upgrade cannot
@@ -56,7 +135,12 @@ export function installCalmAssistantLayout(): void {
     return;
   }
 
-  const patch: CalmAssistantLayoutPatch = { hidesThinking, hidesWorkingNote };
+  const patch: CalmAssistantLayoutPatch = {
+    hidesThinking,
+    hidesWorkingNote,
+    turnId: 0,
+    rows: [],
+  };
   const AssistantMessageComponent = PiCodingAgent.AssistantMessageComponent;
   if (typeof AssistantMessageComponent !== "function") {
     throw new Error("Firstmate Calm requires Pi AssistantMessageComponent");
@@ -66,31 +150,95 @@ export function installCalmAssistantLayout(): void {
     throw new Error("Firstmate Calm requires Pi AssistantMessageComponent.updateContent");
   }
 
-  AssistantMessageComponent.prototype.updateContent = function (
+  let applying = false;
+
+  const laterSameTurnHasRealVisibleText = (component: object): boolean => {
+    const index = patch.rows.findIndex((row) => row.component === component);
+    if (index < 0) return false;
+    const turnId = patch.rows[index].turnId;
+    for (let later = index + 1; later < patch.rows.length; later += 1) {
+      const row = patch.rows[later];
+      if (row.turnId !== turnId) break;
+      if (hasRealVisibleText(row.message)) return true;
+    }
+    return false;
+  };
+
+  const trackRow = (component: object, message: AssistantMessage): void => {
+    const existing = patch.rows.find((row) => row.component === component);
+    if (existing) {
+      existing.message = message;
+      return;
+    }
+    patch.rows.push({ component, message, turnId: patch.turnId });
+  };
+
+  const presentationFor = (
+    state: AssistantMessagePresentationState,
     message: AssistantMessage,
-  ): void {
-    const state = this as unknown as AssistantMessagePresentationState;
+    component: object,
+  ): AssistantMessage => {
     const hideThinking =
       state.hiddenThinkingLabel === "" &&
       state.hideThinkingBlock &&
       patch.hidesThinking();
     const hideWorkingNote =
-      patch.hidesWorkingNote() && isMidTurnAssistantMessage(message);
-    const presentationMessage =
-      hideThinking || hideWorkingNote
-        ? {
-            ...message,
-            content: message.content.filter(
-              (block) =>
-                !(hideThinking && block.type === "thinking") &&
-                !(hideWorkingNote && block.type === "text"),
-            ),
-          }
-        : message;
-
-    originalUpdateContent.call(this, presentationMessage);
-    if (presentationMessage !== message) state.lastMessage = message;
+      patch.hidesWorkingNote() &&
+      isMidTurnAssistantMessage(message) &&
+      laterSameTurnHasRealVisibleText(component);
+    if (!hideThinking && !hideWorkingNote) return message;
+    return {
+      ...message,
+      content: message.content.filter(
+        (block) =>
+          !(hideThinking && block.type === "thinking") &&
+          !(hideWorkingNote && block.type === "text"),
+      ),
+    };
   };
+
+  AssistantMessageComponent.prototype.updateContent = function (
+    message: AssistantMessage,
+    isStreaming?: boolean,
+  ): void {
+    const component = this as object;
+    const state = this as unknown as AssistantMessagePresentationState;
+    trackRow(component, message);
+    const presentationMessage = presentationFor(state, message, component);
+    if (isStreaming === undefined) {
+      originalUpdateContent.call(this, presentationMessage);
+    } else {
+      originalUpdateContent.call(this, presentationMessage, isStreaming);
+    }
+    if (presentationMessage !== message) state.lastMessage = message;
+
+    if (applying) return;
+    applying = true;
+    try {
+      const index = patch.rows.findIndex((row) => row.component === component);
+      const turnId = index < 0 ? patch.turnId : patch.rows[index].turnId;
+      for (let earlier = 0; earlier < index; earlier += 1) {
+        const row = patch.rows[earlier];
+        if (row.turnId !== turnId) continue;
+        if (!isMidTurnAssistantMessage(row.message)) continue;
+        AssistantMessageComponent.prototype.updateContent.call(row.component, row.message);
+      }
+    } finally {
+      applying = false;
+    }
+  };
+
+  const InteractiveMode = PiCodingAgent.InteractiveMode;
+  const originalAddMessageToChat = InteractiveMode?.prototype?.addMessageToChat;
+  if (typeof originalAddMessageToChat === "function") {
+    InteractiveMode.prototype.addMessageToChat = function (
+      message: UserMessageLike,
+      options?: unknown,
+    ) {
+      if (isGenuineUserTurnBoundary(message)) patch.turnId += 1;
+      return originalAddMessageToChat.call(this, message, options);
+    };
+  }
 
   registry[CALM_ASSISTANT_LAYOUT_PATCH] = patch;
 }

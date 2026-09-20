@@ -10,6 +10,7 @@ EXT="$ROOT/.pi/extensions/fm-calm.ts"
 ASSISTANT_LAYOUT="$ROOT/.pi/extensions/lib/fm-calm-assistant-layout.ts"
 OPERATIONAL_USER_LAYOUT="$ROOT/.pi/extensions/lib/fm-calm-operational-user-layout.ts"
 VISIBILITY="$ROOT/.pi/extensions/lib/fm-calm-visibility.ts"
+CURSOR_SKILL_LAYOUT="$ROOT/.pi/extensions/lib/fm-calm-cursor-skill-layout.ts"
 WORKING_SHIP="$ROOT/.pi/extensions/lib/fm-calm-working-ship.ts"
 WATCH_EXT="$ROOT/.pi/extensions/fm-primary-pi-watch.ts"
 OPERATIONAL_INPUT="$ROOT/bin/fm-operational-input.sh"
@@ -170,6 +171,7 @@ test_home_resolution() {
   cp "$ASSISTANT_LAYOUT" "$fixture/project/.pi/extensions/lib/fm-calm-assistant-layout.ts"
   cp "$OPERATIONAL_USER_LAYOUT" "$fixture/project/.pi/extensions/lib/fm-calm-operational-user-layout.ts"
   cp "$VISIBILITY" "$fixture/project/.pi/extensions/lib/fm-calm-visibility.ts"
+  cp "$CURSOR_SKILL_LAYOUT" "$fixture/project/.pi/extensions/lib/fm-calm-cursor-skill-layout.ts"
   cp "$WORKING_SHIP" "$fixture/project/.pi/extensions/lib/fm-calm-working-ship.ts"
   cp "$PI_OPERATIONAL_INPUT" "$fixture/project/.pi/extensions/lib/fm-operational-input.ts"
   ln -s "$PI_PACKAGE_DIR" "$fixture/project/node_modules/@earendil-works/pi-coding-agent"
@@ -292,6 +294,7 @@ test_pi_compat_degraded_adapter() {
   cp "$ASSISTANT_LAYOUT" "$fixture/project/.pi/extensions/lib/fm-calm-assistant-layout.ts"
   cp "$OPERATIONAL_USER_LAYOUT" "$fixture/project/.pi/extensions/lib/fm-calm-operational-user-layout.ts"
   cp "$VISIBILITY" "$fixture/project/.pi/extensions/lib/fm-calm-visibility.ts"
+  cp "$CURSOR_SKILL_LAYOUT" "$fixture/project/.pi/extensions/lib/fm-calm-cursor-skill-layout.ts"
   cp "$WORKING_SHIP" "$fixture/project/.pi/extensions/lib/fm-calm-working-ship.ts"
   cp "$PI_OPERATIONAL_INPUT" "$fixture/project/.pi/extensions/lib/fm-operational-input.ts"
   ln -s "$PI_PACKAGE_DIR" "$fixture/project/node_modules/@earendil-works/pi-coding-agent"
@@ -391,6 +394,7 @@ test_pi_compat_missing_adapter_exports() {
   cp "$ASSISTANT_LAYOUT" "$fixture/project/.pi/extensions/lib/fm-calm-assistant-layout.ts"
   cp "$OPERATIONAL_USER_LAYOUT" "$fixture/project/.pi/extensions/lib/fm-calm-operational-user-layout.ts"
   cp "$VISIBILITY" "$fixture/project/.pi/extensions/lib/fm-calm-visibility.ts"
+  cp "$CURSOR_SKILL_LAYOUT" "$fixture/project/.pi/extensions/lib/fm-calm-cursor-skill-layout.ts"
   cp "$WORKING_SHIP" "$fixture/project/.pi/extensions/lib/fm-calm-working-ship.ts"
   cp "$PI_OPERATIONAL_INPUT" "$fixture/project/.pi/extensions/lib/fm-operational-input.ts"
   printf '%s\n' '{"type":"module"}' >"$fixture/project/package.json"
@@ -405,10 +409,12 @@ test_pi_compat_missing_adapter_exports() {
   out=$(cd "$fixture/project" && node --input-type=module 2>&1 <<'JS'
 const assistant = await import("./.pi/extensions/lib/fm-calm-assistant-layout.ts");
 const operational = await import("./.pi/extensions/lib/fm-calm-operational-user-layout.ts");
+const cursorSkill = await import("./.pi/extensions/lib/fm-calm-cursor-skill-layout.ts");
 
 for (const [name, install, expected] of [
   ["collapsed-thinking", assistant.installCalmAssistantLayout, "AssistantMessageComponent"],
   ["operational-user-row", operational.installCalmOperationalUserLayout, "InteractiveMode"],
+  ["cursor-skill-tool", cursorSkill.installCalmCursorSkillLayout, "ToolExecutionComponent"],
 ]) {
   let reason;
   try {
@@ -451,6 +457,7 @@ test_builtin_gate_load_time() {
   cp "$ASSISTANT_LAYOUT" "$fixture/project/.pi/extensions/lib/fm-calm-assistant-layout.ts"
   cp "$OPERATIONAL_USER_LAYOUT" "$fixture/project/.pi/extensions/lib/fm-calm-operational-user-layout.ts"
   cp "$VISIBILITY" "$fixture/project/.pi/extensions/lib/fm-calm-visibility.ts"
+  cp "$CURSOR_SKILL_LAYOUT" "$fixture/project/.pi/extensions/lib/fm-calm-cursor-skill-layout.ts"
   cp "$WORKING_SHIP" "$fixture/project/.pi/extensions/lib/fm-calm-working-ship.ts"
   cp "$PI_OPERATIONAL_INPUT" "$fixture/project/.pi/extensions/lib/fm-operational-input.ts"
   ln -s "$PI_PACKAGE_DIR" "$fixture/project/node_modules/@earendil-works/pi-coding-agent"
@@ -537,6 +544,7 @@ test_calm_activation_collision_and_regression_bound() {
   cp "$ASSISTANT_LAYOUT" "$fixture/project/.pi/extensions/lib/fm-calm-assistant-layout.ts"
   cp "$OPERATIONAL_USER_LAYOUT" "$fixture/project/.pi/extensions/lib/fm-calm-operational-user-layout.ts"
   cp "$VISIBILITY" "$fixture/project/.pi/extensions/lib/fm-calm-visibility.ts"
+  cp "$CURSOR_SKILL_LAYOUT" "$fixture/project/.pi/extensions/lib/fm-calm-cursor-skill-layout.ts"
   cp "$WORKING_SHIP" "$fixture/project/.pi/extensions/lib/fm-calm-working-ship.ts"
   cp "$PI_OPERATIONAL_INPUT" "$fixture/project/.pi/extensions/lib/fm-operational-input.ts"
   ln -s "$PI_PACKAGE_DIR" "$fixture/project/node_modules/@earendil-works/pi-coding-agent"
@@ -751,6 +759,7 @@ test_rendering_and_session_lifecycle() {
   cp "$ASSISTANT_LAYOUT" "$fixture/lib/fm-calm-assistant-layout.ts"
   cp "$OPERATIONAL_USER_LAYOUT" "$fixture/lib/fm-calm-operational-user-layout.ts"
   cp "$VISIBILITY" "$fixture/lib/fm-calm-visibility.ts"
+  cp "$CURSOR_SKILL_LAYOUT" "$fixture/lib/fm-calm-cursor-skill-layout.ts"
   cp "$WORKING_SHIP" "$fixture/lib/fm-calm-working-ship.ts"
   cp "$ROOT/.pi/extensions/lib/fm-operational-input.ts" "$fixture/lib/fm-operational-input.ts"
   cp "$ROOT/.pi/extensions/lib/fm-branch-dispatch.ts" "$fixture/lib/fm-branch-dispatch.ts"
@@ -1079,6 +1088,54 @@ customRow.markExecutionStarted();
 customRow.setArgsComplete();
 customRow.updateResult({ content: [{ type: "text", text: "CUSTOM_RESULT" }], details: {}, isError: false });
 
+const cursorSkillDefinition = {
+  name: "cursor_activate_skill",
+  label: "Cursor skill",
+  description: "Load skill instructions",
+  parameters: { type: "object", properties: { name: { type: "string" } } },
+  async execute() {
+    return { content: [{ type: "text", text: "SKILL_CONTENT" }], details: {} };
+  },
+};
+const cursorSkillRow = new ToolExecutionComponent(
+  "cursor_activate_skill",
+  "cursor-skill-row",
+  { name: "harness-adapters" },
+  { showImages: false },
+  cursorSkillDefinition,
+  renderUi,
+  process.cwd(),
+);
+cursorSkillRow.markExecutionStarted();
+cursorSkillRow.setArgsComplete();
+cursorSkillRow.updateResult({
+  content: [{ type: "text", text: "SKILL_CONTENT" }],
+  details: {},
+  isError: false,
+});
+const cursorSkillMcpRow = new ToolExecutionComponent(
+  "pi__cursor_activate_skill",
+  "cursor-skill-mcp-row",
+  { name: "harness-adapters" },
+  { showImages: false },
+  { ...cursorSkillDefinition, name: "pi__cursor_activate_skill" },
+  renderUi,
+  process.cwd(),
+);
+cursorSkillMcpRow.markExecutionStarted();
+cursorSkillMcpRow.setArgsComplete();
+cursorSkillMcpRow.updateResult({
+  content: [{ type: "text", text: "SKILL_CONTENT" }],
+  details: {},
+  isError: false,
+});
+if (!cursorSkillRow.render(100).join("\n").includes("cursor_activate_skill")) {
+  throw new Error("Calm-off Cursor skill tool row was already hidden");
+}
+if (!cursorSkillMcpRow.render(100).join("\n").includes("pi__cursor_activate_skill")) {
+  throw new Error("Calm-off Cursor skill MCP tool row was already hidden");
+}
+
 setCapabilities({ images: "iterm2", trueColor: true, hyperlinks: true });
 const imageRow = new ToolExecutionComponent(
   "read",
@@ -1352,6 +1409,12 @@ if (calmImageOutput.includes("pixel.png")) {
 if (!customRow.render(100).join("\n").includes("CUSTOM_CALL")) {
   throw new Error("calm mode incorrectly claimed or applied generic custom-tool coverage");
 }
+if (cursorSkillRow.render(100).length !== 0) {
+  throw new Error("Calm left the cursor_activate_skill call/result shell visible");
+}
+if (cursorSkillMcpRow.render(100).length !== 0) {
+  throw new Error("Calm left the pi__cursor_activate_skill call/result shell visible");
+}
 if (watchActual.render(100).length !== 0) {
   throw new Error("Calm left the fm_watch_arm_pi call/result shell visible");
 }
@@ -1398,6 +1461,12 @@ if (JSON.stringify(imageRow.render(100)) !== JSON.stringify(imageVisibleBefore))
 }
 if (JSON.stringify(watchActual.render(100)) !== JSON.stringify(watchBaseline.render(100))) {
   throw new Error("fm_watch_arm_pi did not restore its stock call/result shell");
+}
+if (!cursorSkillRow.render(100).join("\n").includes("cursor_activate_skill")) {
+  throw new Error("turning Calm off did not restore the cursor_activate_skill shell");
+}
+if (!cursorSkillMcpRow.render(100).join("\n").includes("pi__cursor_activate_skill")) {
+  throw new Error("turning Calm off did not restore the pi__cursor_activate_skill shell");
 }
 if (workingVisible !== true || hiddenThinkingLabel !== undefined || statuses.get("firstmate-calm") !== undefined) {
   throw new Error("turning Calm off did not restore stock presentation controls");
@@ -1468,6 +1537,7 @@ test_calm_mid_turn_working_notes() {
   cp "$ASSISTANT_LAYOUT" "$fixture/lib/fm-calm-assistant-layout.ts"
   cp "$OPERATIONAL_USER_LAYOUT" "$fixture/lib/fm-calm-operational-user-layout.ts"
   cp "$VISIBILITY" "$fixture/lib/fm-calm-visibility.ts"
+  cp "$CURSOR_SKILL_LAYOUT" "$fixture/lib/fm-calm-cursor-skill-layout.ts"
   cp "$WORKING_SHIP" "$fixture/lib/fm-calm-working-ship.ts"
   cp "$PI_OPERATIONAL_INPUT" "$fixture/lib/fm-operational-input.ts"
   ln -s "$PI_PACKAGE_DIR" "$fixture/node_modules/@earendil-works/pi-coding-agent"
@@ -1698,6 +1768,96 @@ for (const persisted of ["on\n", "max\n", "max"]) {
   }
   requireVisible("midTurn", "MIDTURN_WORKING_NOTE", "Calm toggled off after restore");
 }
+
+writeFileSync(calmPreferencePath, "on\n", "utf8");
+visibility.setCalmPresentation(true);
+ui.setHiddenThinkingLabel("");
+const lastRecap = {
+  ...assistantBase,
+  stopReason: "toolUse",
+  content: [{ type: "text", text: "LAST_RECAP_TEXT" }, toolCall],
+};
+const lastRecapRow = new AssistantMessageComponent(lastRecap, true);
+components.push(lastRecapRow);
+if (JSON.stringify(lastRecap) !== JSON.stringify({
+  ...assistantBase,
+  stopReason: "toolUse",
+  content: [{ type: "text", text: "LAST_RECAP_TEXT" }, toolCall],
+})) {
+  throw new Error("last-recap layout mutated the assistant message");
+}
+if (!lastRecapRow.render(100).join("\n").includes("LAST_RECAP_TEXT")) {
+  throw new Error("Calm hid the last recap when no later same-turn row had real visible text");
+}
+
+const incompleteLater = {
+  ...assistantBase,
+  stopReason: "error",
+  content: [{ type: "text", text: "Cursor shell did not complete\nmissing completion" }],
+};
+const incompleteRow = new AssistantMessageComponent(incompleteLater, true);
+components.push(incompleteRow);
+if (!lastRecapRow.render(100).join("\n").includes("LAST_RECAP_TEXT")) {
+  throw new Error("Calm hid the last recap behind a later incomplete line");
+}
+
+const toolsOnlyLater = {
+  ...assistantBase,
+  stopReason: "toolUse",
+  content: [toolCall],
+};
+const toolsOnlyRow = new AssistantMessageComponent(toolsOnlyLater, true);
+components.push(toolsOnlyRow);
+if (!lastRecapRow.render(100).join("\n").includes("LAST_RECAP_TEXT")) {
+  throw new Error("Calm hid the last recap behind a later tools-only row");
+}
+
+const replayLater = {
+  ...assistantBase,
+  stopReason: "stop",
+  content: [{ type: "text", text: "Tool call (Cursor activity, call cursor-replay-1-tool-1)" }],
+};
+const replayRow = new AssistantMessageComponent(replayLater, true);
+components.push(replayRow);
+if (!lastRecapRow.render(100).join("\n").includes("LAST_RECAP_TEXT")) {
+  throw new Error("Calm hid the last recap behind a later replay line");
+}
+
+const { InteractiveMode } = await import("@earendil-works/pi-coding-agent");
+const fakeMode = {
+  getUserMessageText(message) {
+    return typeof message.content === "string" ? message.content : "";
+  },
+};
+try {
+  InteractiveMode.prototype.addMessageToChat.call(fakeMode, { role: "user", content: "next captain turn" });
+} catch {
+  // The stock method needs a live mode; the turn boundary is recorded before that call.
+}
+
+const supersededNote = {
+  ...assistantBase,
+  stopReason: "toolUse",
+  content: [{ type: "text", text: "SUPERSEDED_WORKING_NOTE" }, toolCall],
+};
+const supersededRow = new AssistantMessageComponent(supersededNote, true);
+components.push(supersededRow);
+const laterReply = {
+  ...assistantBase,
+  stopReason: "stop",
+  content: [{ type: "text", text: "LATER_REAL_REPLY" }],
+};
+const laterReplyRow = new AssistantMessageComponent(laterReply, true);
+components.push(laterReplyRow);
+if (supersededRow.render(100).join("\n").includes("SUPERSEDED_WORKING_NOTE")) {
+  throw new Error("Calm left a working note visible after a later same-turn recap");
+}
+if (!laterReplyRow.render(100).join("\n").includes("LATER_REAL_REPLY")) {
+  throw new Error("Calm hid the later same-turn recap");
+}
+if (!lastRecapRow.render(100).join("\n").includes("LAST_RECAP_TEXT")) {
+  throw new Error("a later turn hid the previous turn's last recap");
+}
 if (!existsSync(calmPreferencePath)) {
   throw new Error("Calm stopped persisting its preference file");
 }
@@ -1706,7 +1866,7 @@ JS
   out=$(cat "$output_file")
   [ "$status" -eq 0 ] || fail "Pi calm mid-turn contract failed: $out"
   [ -z "$out" ] || fail "Pi calm mid-turn test printed output: $out"
-  pass "Pi calm on collapses mid-turn assistant working notes to zero height while Calm off keeps them, leaves streaming, truncated-final, and genuine final replies untouched, never mutates the messages, ignores every /calm argument, and restores a legacy persisted max as ordinary Calm on"
+  pass "Pi calm on collapses superseded mid-turn working notes, keeps the last recap when later rows are replay/lifecycle/incomplete or tools-only, leaves streaming, truncated-final, and genuine final replies untouched, never mutates the messages, ignores every /calm argument, and restores a legacy persisted max as ordinary Calm on"
 }
 
 test_operational_followup_turn_e2e() {
@@ -1728,6 +1888,7 @@ test_operational_followup_turn_e2e() {
   cp "$ASSISTANT_LAYOUT" "$project/.pi/extensions/lib/fm-calm-assistant-layout.ts"
   cp "$OPERATIONAL_USER_LAYOUT" "$project/.pi/extensions/lib/fm-calm-operational-user-layout.ts"
   cp "$VISIBILITY" "$project/.pi/extensions/lib/fm-calm-visibility.ts"
+  cp "$CURSOR_SKILL_LAYOUT" "$project/.pi/extensions/lib/fm-calm-cursor-skill-layout.ts"
   cp "$WORKING_SHIP" "$project/.pi/extensions/lib/fm-calm-working-ship.ts"
   cp "$PI_OPERATIONAL_INPUT" "$project/.pi/extensions/lib/fm-operational-input.ts"
   printf '%s\n' '{"followUpMode":"all"}' >"$config/settings.json"
@@ -2102,6 +2263,7 @@ test_hidden_block_geometry_e2e() {
   cp "$ASSISTANT_LAYOUT" "$project/.pi/extensions/lib/fm-calm-assistant-layout.ts"
   cp "$OPERATIONAL_USER_LAYOUT" "$project/.pi/extensions/lib/fm-calm-operational-user-layout.ts"
   cp "$VISIBILITY" "$project/.pi/extensions/lib/fm-calm-visibility.ts"
+  cp "$CURSOR_SKILL_LAYOUT" "$project/.pi/extensions/lib/fm-calm-cursor-skill-layout.ts"
   cp "$WORKING_SHIP" "$project/.pi/extensions/lib/fm-calm-working-ship.ts"
   cp "$PI_OPERATIONAL_INPUT" "$project/.pi/extensions/lib/fm-operational-input.ts"
   printf '%s\n' on >"$home/config/calm"
@@ -2336,6 +2498,7 @@ test_working_ship_geometry_and_lifecycle() {
   cp "$ASSISTANT_LAYOUT" "$fixture/lib/fm-calm-assistant-layout.ts"
   cp "$OPERATIONAL_USER_LAYOUT" "$fixture/lib/fm-calm-operational-user-layout.ts"
   cp "$VISIBILITY" "$fixture/lib/fm-calm-visibility.ts"
+  cp "$CURSOR_SKILL_LAYOUT" "$fixture/lib/fm-calm-cursor-skill-layout.ts"
   cp "$WORKING_SHIP" "$fixture/lib/fm-calm-working-ship.ts"
   cp "$PI_OPERATIONAL_INPUT" "$fixture/lib/fm-operational-input.ts"
   ln -s "$PI_PACKAGE_DIR" "$fixture/node_modules/@earendil-works/pi-coding-agent"
@@ -3325,6 +3488,7 @@ test_interactive_terminal_e2e() {
   cp "$ASSISTANT_LAYOUT" "$project/.pi/extensions/lib/fm-calm-assistant-layout.ts"
   cp "$OPERATIONAL_USER_LAYOUT" "$project/.pi/extensions/lib/fm-calm-operational-user-layout.ts"
   cp "$VISIBILITY" "$project/.pi/extensions/lib/fm-calm-visibility.ts"
+  cp "$CURSOR_SKILL_LAYOUT" "$project/.pi/extensions/lib/fm-calm-cursor-skill-layout.ts"
   cp "$WORKING_SHIP" "$project/.pi/extensions/lib/fm-calm-working-ship.ts"
   cp "$ROOT/.pi/extensions/lib/fm-operational-input.ts" "$project/.pi/extensions/lib/fm-operational-input.ts"
   cp "$ROOT/.pi/extensions/lib/fm-branch-dispatch.ts" "$project/.pi/extensions/lib/fm-branch-dispatch.ts"
