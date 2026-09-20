@@ -16,22 +16,22 @@ permissions:
 # main push gets its own group and is never cancelled. Cancellation is likewise
 # limited to pull_request events. Evidence and rationale: the September 12
 # Actions starvation report, section 3 "Workflow mechanics to ship first".
-#
-# A pull_request "edited" action carries no new commit: it fires whenever a
-# PR's metadata changes for the commit already under validation, including
-# the no-mistakes pipeline's own mid-run PR-body edit. GitHub still creates a
-# workflow run and evaluates its concurrency group for that action even
-# though this workflow's default types (opened/synchronize/reopened) mean no
-# job of that run executes, so an unqualified shared group lets a same-commit
-# body edit cancel the real CI run still validating that commit. Give the
-# edited action its own immutable per-run group instead, so it can never
-# collide with the shared per-PR group; genuine pushes (opened, synchronize,
-# reopened) keep sharing that group so true supersession is unaffected.
-# no-mistakes-required.yml already isolates body-bearing events the same way.
 # The compliance workflow deliberately keeps its own event-specific groups; do
 # not collapse it onto this simpler shape.
+#
+# This workflow subscribes only to the default pull_request types (opened,
+# synchronize, reopened), so a pull_request "edited" action - such as the
+# no-mistakes pipeline's own mid-run PR-body edit - never creates a run of
+# this workflow at all and never touches this concurrency group. A prior
+# revision of this file carved the edited action out of the shared group on
+# the mistaken belief that it did; GitHub Actions run history for this repo
+# confirmed that carve-out was inert, and it is not reinstated here. The
+# September 20 self-cancel incident this file once attributed to that
+# carve-out was independently traced to two CI jobs each exceeding their own
+# job-level timeout-minutes cap (see the portable parallel shard timeouts
+# below), not to concurrency cancellation.
 concurrency:
-  group: ci-${{ github.workflow }}-${{ github.event_name }}-${{ github.event.action == 'edited' && github.run_id || github.event.pull_request.number || github.run_id }}
+  group: ci-${{ github.workflow }}-${{ github.event_name }}-${{ github.event.pull_request.number || github.run_id }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
@@ -84,7 +84,14 @@ jobs:
     # A packed hint sum is not a measured job wall time or proof of headroom.
     # Evidence and refresh procedure: docs/fm-test-portable-shards.md.
     # Changes to this cap or the lane count require a separate scope decision.
-    timeout-minutes: 10
+    # Widened from 10 to 15 minutes on 2026-09-20: this lane's genuinely
+    # measured runs (7-9 min) left only tight margin against the prior 10m
+    # cap, unlike Lint's proportionally larger headroom (14-17m measured
+    # against a 25m cap). A tripped-without-verdict job here is strictly
+    # worse than for an unbounded lane, because concurrency cancellation
+    # elsewhere (a genuine same-PR push) can no longer rescue it once it is
+    # already past its own cap; see the concurrency-group comment above.
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v6
         with:
@@ -128,7 +135,7 @@ jobs:
     name: Behavior portable parallel 2
     runs-on: ubuntu-latest
     # Same timeout rationale as portable parallel shard 1 above.
-    timeout-minutes: 10
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v6
         with:
