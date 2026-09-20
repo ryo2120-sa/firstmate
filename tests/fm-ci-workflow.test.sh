@@ -134,6 +134,13 @@ CAPS
 
 # Cancellation makes an undersized cap costlier: a falsely tripped job now also
 # discards a run nobody replaced. These bounds were measured, not guessed.
+# tests-portable-parallel-1/2 were widened from 10 to 15 minutes on
+# 2026-09-20: six consecutive green runs that day (35521389413, 35522119589,
+# 35525714064, 35527851430, 35530147547, 35530818396) show each shard's own
+# fm-test-timing-portable-parallel-*.json completing in 6.34-9.71 actual
+# measured minutes, so the prior 10-minute cap left as little as ~17 seconds
+# of margin on the slowest observed run. This must fail against that prior
+# 10-minute value, not just assert the field is present.
 test_measured_lanes_keep_their_existing_bounds() {
   local job expected actual
   while read -r job expected; do
@@ -142,32 +149,13 @@ test_measured_lanes_keep_their_existing_bounds() {
     [ "$actual" = "$expected" ] \
       || fail "$job timeout must stay $expected minutes, got $actual"
   done <<'CAPS'
+tests-portable-parallel-1 15
+tests-portable-parallel-2 15
 tests-portable-serial 30
 tests-herdr 75
 macos-stock-bash 10
 CAPS
-  pass "the already-measured lane bounds are unchanged"
-}
-
-# The portable parallel shards' genuinely measured runs (7-9 min) left only
-# tight margin against the former 10-minute cap: a job tripped there gets no
-# verdict, and (unlike an unbounded lane) it also cannot be rescued by a
-# genuine same-PR push cancelling and replacing it once it is past its own
-# cap. Widened to 15 minutes on 2026-09-20 to match Lint's proportionally
-# larger measured-to-cap headroom. This must fail against the prior 10-minute
-# value, not just assert the field is present.
-test_portable_parallel_shards_have_widened_headroom() {
-  local job expected actual
-  while read -r job expected; do
-    [ -n "$job" ] || continue
-    actual=$(job_timeout "$job") || fail "could not read the $job timeout"
-    [ "$actual" = "$expected" ] \
-      || fail "$job timeout must be widened to $expected minutes, got $actual"
-  done <<'CAPS'
-tests-portable-parallel-1 15
-tests-portable-parallel-2 15
-CAPS
-  pass "the portable parallel shards carry the widened 15-minute headroom"
+  pass "the already-measured lane bounds are unchanged, including the widened portable parallel headroom"
 }
 
 test_pr_pushes_supersede_within_one_pr
@@ -176,4 +164,3 @@ test_main_pushes_are_never_cancelled
 test_every_job_has_a_finite_timeout
 test_previously_unbounded_jobs_keep_their_caps
 test_measured_lanes_keep_their_existing_bounds
-test_portable_parallel_shards_have_widened_headroom

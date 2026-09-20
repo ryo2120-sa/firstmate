@@ -27,9 +27,11 @@ permissions:
 # the mistaken belief that it did; GitHub Actions run history for this repo
 # confirmed that carve-out was inert, and it is not reinstated here. The
 # September 20 self-cancel incident this file once attributed to that
-# carve-out was independently traced to two CI jobs each exceeding their own
-# job-level timeout-minutes cap (see the portable parallel shard timeouts
-# below), not to concurrency cancellation.
+# carve-out had two separate real causes, neither of them concurrency
+# cancellation: the portable parallel shard hit its own tight job timeout
+# (see that job's comment below, now widened with measured evidence), while
+# Lint separately overran on the known hosted-runner OOM issue tracked
+# elsewhere and left out of scope here; Lint's own cap is unchanged.
 concurrency:
   group: ci-${{ github.workflow }}-${{ github.event_name }}-${{ github.event.pull_request.number || github.run_id }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
@@ -84,13 +86,22 @@ jobs:
     # A packed hint sum is not a measured job wall time or proof of headroom.
     # Evidence and refresh procedure: docs/fm-test-portable-shards.md.
     # Changes to this cap or the lane count require a separate scope decision.
-    # Widened from 10 to 15 minutes on 2026-09-20: this lane's genuinely
-    # measured runs (7-9 min) left only tight margin against the prior 10m
-    # cap, unlike Lint's proportionally larger headroom (14-17m measured
-    # against a 25m cap). A tripped-without-verdict job here is strictly
-    # worse than for an unbounded lane, because concurrency cancellation
-    # elsewhere (a genuine same-PR push) can no longer rescue it once it is
-    # already past its own cap; see the concurrency-group comment above.
+    # Widened from 10 to 15 minutes on 2026-09-20, evidence-based: six
+    # consecutive green runs that same day (35521389413, 35522119589,
+    # 35525714064, 35527851430, 35530147547, 35530818396) show this shard's
+    # own fm-test-timing-portable-parallel-1.json completing in 6.75-9.71
+    # actual measured minutes, so the prior 10-minute cap left only about
+    # 17 seconds of margin on the slowest of those six runs. 15 minutes
+    # applies roughly the same measured-to-cap ratio the portable serial
+    # lane uses (~20m measured against its 30m cap), so a passing run of
+    # ordinary runner-speed variance is not tripped without a verdict. A
+    # tripped-without-verdict outcome here is strictly worse than for an
+    # unbounded lane, because concurrency cancellation elsewhere (a genuine
+    # same-PR push) can no longer rescue it once it is already past its own
+    # cap; see the concurrency-group comment above. This does not address
+    # the separate September 20 Lint job overrun, which is the known
+    # hosted-runner OOM tracked and left out of scope here; Lint's own
+    # 25-minute cap is unchanged.
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v6
