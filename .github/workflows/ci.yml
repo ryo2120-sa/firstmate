@@ -72,7 +72,26 @@ jobs:
     # A packed hint sum is not a measured job wall time or proof of headroom.
     # Evidence and refresh procedure: docs/fm-test-portable-shards.md.
     # Changes to this cap or the lane count require a separate scope decision.
-    timeout-minutes: 10
+    # Widened from 10 to 15 minutes on 2026-09-20, based on measured JOB
+    # wall time (each run's Actions job started_at/completed_at, which
+    # includes checkout/setup/upload overhead beyond the test-step time
+    # alone) from six green CI runs sampled on that day (35521389413,
+    # 35522119589, 35525714064, 35527851430, 35530147547, 35530818396).
+    # Those runs are fork-head pull_request runs whose own branch carried
+    # this job's earlier 30-minute cap at the time they ran, and they are
+    # not strictly consecutive; only their measured job wall times are
+    # cited as evidence, not that they ran against the 10-minute cap
+    # themselves. Measured job wall time ranged from about 7m09s to
+    # 10m00s (run 35527851430, the slowest). Compared against the
+    # previous 10-minute cap, that range left as little as no real
+    # margin on the slowest observed run, a hang tripwire that can fire
+    # on an ordinary passing run. 15 minutes restores comfortable
+    # headroom above the measured maximum, roughly
+    # the same ratio the portable serial lane keeps (~20m measured
+    # against its 30m cap) and Lint keeps (14-16m measured against its
+    # 25m cap). An undersized cap here discards work nobody replaced (see
+    # the test file for that framing).
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v6
         with:
@@ -115,7 +134,11 @@ jobs:
   tests-portable-parallel-2:
     name: Behavior portable parallel 2
     runs-on: ubuntu-latest
-    # Same timeout rationale as portable parallel shard 1 above.
+    # Kept at the original 10-minute hang tripwire. Measured job wall
+    # time from the same sampled runs peaks at 8m22s (run 35522119589),
+    # about 1.19x under this cap - knowingly below the ~1.5x headroom
+    # shard 1 now uses. No measured run has hit this cap, so nothing
+    # evidences a widen here.
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v6

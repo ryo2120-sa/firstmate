@@ -134,6 +134,10 @@ CAPS
 
 # Cancellation makes an undersized cap costlier: a falsely tripped job now also
 # discards a run nobody replaced. These bounds were measured, not guessed.
+# tests-portable-parallel-1 was widened from 10 to 15 minutes on 2026-09-20
+# (evidence and provenance: the job comment in .github/workflows/ci.yml).
+# This must fail against that prior 10-minute value, not just assert the
+# field is present.
 test_measured_lanes_keep_their_existing_bounds() {
   local job expected actual
   while read -r job expected; do
@@ -142,13 +146,13 @@ test_measured_lanes_keep_their_existing_bounds() {
     [ "$actual" = "$expected" ] \
       || fail "$job timeout must stay $expected minutes, got $actual"
   done <<'CAPS'
-tests-portable-parallel-1 10
+tests-portable-parallel-1 15
 tests-portable-parallel-2 10
 tests-portable-serial 30
 tests-herdr 75
 macos-stock-bash 10
 CAPS
-  pass "the already-measured lane bounds are unchanged"
+  pass "the already-measured lane bounds hold, including shard 1's widened cap"
 }
 
 test_pr_pushes_supersede_within_one_pr
