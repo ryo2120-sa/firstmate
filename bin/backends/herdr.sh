@@ -882,15 +882,28 @@ fm_backend_herdr_presentation_session_lock_path() {  # <session>
 # reacquire, which deliberately reuses this same budget rather than a
 # shorter bound - see the comment at that call site), bin/fm-teardown.sh's
 # preflight acquire, and fm_backend_herdr_kill below. Each attempt sleeps
-# 0.1s, so the default of 700 attempts is a 70s budget: a peer can
-# legitimately hold the lock across the whole `treehouse get`
+# 0.1s, so the production constant of 700 attempts is a 70s budget: a peer
+# can legitimately hold the lock across the whole `treehouse get`
 # worktree-settle wait, whose own ceiling is 60s ("did not enter an
 # isolated worktree within 60s") - keep the two numbers in sync if either
-# changes. FM_BACKEND_HERDR_PRESENTATION_LOCK_WAIT_ATTEMPTS overrides the
-# budget for tests that need to prove contention fallback/refusal without
-# paying the full production wait.
+# changes. Production waiters always consume that constant. Tests may
+# inject a smaller wait through FM_BACKEND_HERDR_PRESENTATION_LOCK_WAIT_ATTEMPTS
+# only when the value is a positive integer; any other value (unset, empty,
+# zero, non-integer) is ignored so a malformed or operator-set override
+# cannot collapse a waiter to a zero-wait refusal.
 fm_backend_herdr_presentation_lock_wait_attempts() {
-  printf '%s' "${FM_BACKEND_HERDR_PRESENTATION_LOCK_WAIT_ATTEMPTS:-700}"
+  local production=700 override
+  override=${FM_BACKEND_HERDR_PRESENTATION_LOCK_WAIT_ATTEMPTS-}
+  case "$override" in
+    ''|*[!0-9]*) printf '%s' "$production" ;;
+    *)
+      if [ "$override" -gt 0 ] 2>/dev/null; then
+        printf '%s' "$override"
+      else
+        printf '%s' "$production"
+      fi
+      ;;
+  esac
 }
 
 # fm_backend_herdr_projection_focus_snapshot: print the exact active

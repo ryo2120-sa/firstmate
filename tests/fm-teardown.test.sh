@@ -2145,6 +2145,88 @@ SH
   pass "herdr flat teardown refuses before returning the isolated copy under lock contention and the retry completes cleanly"
 }
 
+test_herdr_flat_teardown_waits_out_a_peer_hold_past_the_old_five_second_budget() {
+  local case_dir log closed lock ready release released holder_pid thlog sleeps
+  case_dir=$(make_case herdr-lock-outlast)
+  write_meta "$case_dir" local-only ship
+  configure_flat_herdr_teardown_case "$case_dir"
+  log="$case_dir/herdr.log"; : > "$log"
+  closed="$case_dir/closed"
+  : > "$case_dir/state/task-x1.status"
+  : > "$case_dir/state/task-x1.turn-ended"
+  thlog="$case_dir/treehouse.log"; : > "$thlog"
+  cat > "$case_dir/fakebin/treehouse" <<SH
+#!/usr/bin/env bash
+printf '%s\n' "\$*" >> "$thlog"
+exit 0
+SH
+  chmod +x "$case_dir/fakebin/treehouse"
+
+  lock=$(FM_FAKE_HERDR_LOG="$log" FM_FAKE_HERDR_CLOSED="$closed" PATH="$case_dir/fakebin:$PATH" \
+    bash -c '. "$0/bin/backends/herdr.sh"; fm_backend_herdr_presentation_session_lock_path default' "$ROOT") \
+    || fail "herdr-lock-outlast: could not resolve the fixture presentation lock path"
+  ready="$case_dir/lock-ready"; release="$case_dir/lock-release"; released="$case_dir/lock-released"
+  sleeps="$case_dir/lock-wait-sleeps"; : > "$sleeps"
+  # Instant sleep 0.1 so the test does not pay wall time, and release the
+  # peer hold on the 51st 0.1-sleep - one past the old per-site 50-attempt
+  # (~5s) literal. Pre-fix teardown refuses before that sleep; the unified
+  # budget keeps waiting, then completes cleanup.
+  cat > "$case_dir/fakebin/sleep" <<SH
+#!/usr/bin/env bash
+if [ "\${1-}" = 0.1 ]; then
+  n=\$(wc -l < "$sleeps" | tr -d '[:space:]')
+  n=\$((n + 1))
+  printf '%s\n' "\$n" >> "$sleeps"
+  if [ "\$n" -eq 51 ]; then
+    : > "$release"
+    waited=0
+    while [ ! -e "$released" ] && [ "\$waited" -lt 100 ]; do
+      /bin/sleep 0.05
+      waited=\$((waited + 1))
+    done
+  fi
+fi
+exit 0
+SH
+  chmod +x "$case_dir/fakebin/sleep"
+
+  ROOT="$ROOT" LOCK="$lock" READY="$ready" RELEASE="$release" RELEASED="$released" bash -c '
+    . "$ROOT/bin/fm-wake-lib.sh"
+    fm_lock_try_acquire "$LOCK" || exit 1
+    : > "$READY"
+    while [ ! -e "$RELEASE" ]; do /bin/sleep 0.05; done
+    fm_lock_release "$LOCK"
+    : > "$RELEASED"
+  ' &
+  holder_pid=$!
+  local waited=0
+  while [ ! -e "$ready" ] && [ "$waited" -lt 50 ]; do /bin/sleep 0.1; waited=$((waited + 1)); done
+  [ -e "$ready" ] || fail "herdr-lock-outlast: the contending lock holder never started"
+
+  unset FM_BACKEND_HERDR_PRESENTATION_LOCK_WAIT_ATTEMPTS
+  FM_FAKE_HERDR_LOG="$log" FM_FAKE_HERDR_CLOSED="$closed" \
+    FM_BACKEND_HERDR_IDLE_SHELL_PROOF_POLLS=1 \
+    run_teardown "$case_dir" --force > "$case_dir/stdout" 2> "$case_dir/stderr" \
+    || {
+      : > "$release"
+      wait "$holder_pid" 2>/dev/null || true
+      fail "herdr-lock-outlast: teardown refused a peer hold past the old 50-attempt budget: $(cat "$case_dir/stderr")"
+    }
+  wait "$holder_pid" 2>/dev/null || true
+  if grep -q "presentation lock is contended" "$case_dir/stderr"; then
+    fail "herdr-lock-outlast: teardown still treated a hold past 50 attempts as contention: $(cat "$case_dir/stderr")"
+  fi
+  [ -e "$closed" ] || fail "herdr-lock-outlast: teardown never closed the pane after waiting out the peer hold"
+  [ -s "$thlog" ] || fail "herdr-lock-outlast: teardown never returned the isolated copy after waiting out the peer hold"
+  [ ! -e "$case_dir/state/task-x1.meta" ] || fail "herdr-lock-outlast: teardown left the metadata behind after waiting out the peer hold"
+  grep -q "teardown task-x1 complete" "$case_dir/stdout" \
+    || fail "herdr-lock-outlast: teardown did not report completion after waiting out the peer hold"
+  sleeps_n=$(wc -l < "$sleeps" | tr -d '[:space:]')
+  [ "$sleeps_n" -ge 51 ] \
+    || fail "herdr-lock-outlast: waiter did not retry past the old 50-attempt budget: $sleeps_n 0.1-sleeps"
+  pass "herdr flat teardown waits out a peer hold past the old 50-attempt budget"
+}
+
 test_herdr_flat_teardown_refuses_records_on_unparseable_presence() {
   local case_dir log closed rc
   case_dir=$(make_case herdr-garbage-presence)
@@ -2187,13 +2269,17 @@ SH
 
   teardown_bin=$TEARDOWN
   case "$mode" in
-    missing-adapter|missing-parser|missing-explicit-close-helper)
+    missing-adapter|missing-parser|missing-explicit-close-helper|missing-wait-attempts)
       mkdir -p "$case_dir/test-root"
       cp -R "$ROOT/bin" "$case_dir/test-root/bin"
       if [ "$mode" = missing-adapter ]; then
         rm -f "$case_dir/test-root/bin/backends/herdr.sh"
       elif [ "$mode" = missing-explicit-close-helper ]; then
         sed -i.bak 's/^fm_backend_herdr_explicit_close_pane_confirmed()/fm_backend_herdr_explicit_close_pane_confirmed_unavailable()/' \
+          "$case_dir/test-root/bin/backends/herdr.sh"
+        rm -f "$case_dir/test-root/bin/backends/herdr.sh.bak"
+      elif [ "$mode" = missing-wait-attempts ]; then
+        sed -i.bak 's/^fm_backend_herdr_presentation_lock_wait_attempts()/fm_backend_herdr_presentation_lock_wait_attempts_unavailable()/' \
           "$case_dir/test-root/bin/backends/herdr.sh"
         rm -f "$case_dir/test-root/bin/backends/herdr.sh.bak"
       else
@@ -2231,6 +2317,7 @@ test_herdr_flat_teardown_preflight_refuses_before_changes() {
   assert_herdr_teardown_preflight_refuses_before_changes missing-adapter
   assert_herdr_teardown_preflight_refuses_before_changes missing-parser
   assert_herdr_teardown_preflight_refuses_before_changes missing-explicit-close-helper
+  assert_herdr_teardown_preflight_refuses_before_changes missing-wait-attempts
   pass "herdr flat teardown preflight refuses before every destructive change"
 }
 
@@ -3685,6 +3772,7 @@ test_secondmate_home_teardown_delivers_final_line_or_refuses
 test_teardown_missing_busy_sidecar_completes
 test_herdr_teardown_clears_escalation_marker
 test_herdr_flat_teardown_refuses_orphaning_records_then_retry_completes
+test_herdr_flat_teardown_waits_out_a_peer_hold_past_the_old_five_second_budget
 test_herdr_flat_teardown_refuses_records_on_unparseable_presence
 test_herdr_flat_teardown_preflight_refuses_before_changes
 test_forced_secondmate_herdr_child_preflight_refuses_before_changes
