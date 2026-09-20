@@ -1,0 +1,7 @@
+=== S6: a transport that forgets --home fails toward the pre-existing block, never toward allow ===
+policy CLI, --home omitted:  cd <home>              -> deny
+policy CLI, --home omitted:  cd <home> && git status -> deny
+policy CLI, --home empty:    cd <home>              -> deny
+policy CLI, --home supplied: cd <home>              -> allow
+policy CLI, --home nonexistent dir: cd <home>       -> deny
+policy CLI, --home= alias (removed by review): cd <home> -> unknown argument: --home=/var/folders/rj/df9ksn5s735899fw3l7

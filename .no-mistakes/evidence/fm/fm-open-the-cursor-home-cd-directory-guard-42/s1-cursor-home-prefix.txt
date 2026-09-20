@@ -1,0 +1,19 @@
+=== S1: Cursor-prefixed cd into the Firstmate home completes (the fix) ===
+Firstmate home (primary checkout): /var/folders/rj/df9ksn5s735899fw3l79fzp80000gq/T//cdguard-live.fqQEmZ/firstmate
+
+$ cd /var/folders/rj/df9ksn5s735899fw3l79fzp80000gq/T//cdguard-live.fqQEmZ/firstmate && git status --short --branch
+  | ## main
+  | ?? .agent-cwd
+  | 
+  agent shell cwd now: /var/folders/rj/df9ksn5s735899fw3l79fzp80000gq/T/cdguard-live.fqQEmZ/firstmate
+
+$ cd /var/folders/rj/df9ksn5s735899fw3l79fzp80000gq/T//cdguard-live.fqQEmZ/firstmate && tail -1 backlog.md
+  | backlog seed
+  | 
+  agent shell cwd now: /var/folders/rj/df9ksn5s735899fw3l79fzp80000gq/T/cdguard-live.fqQEmZ/firstmate
+
+=== Same commands against the PRE-FIX guard (base commit 0835310) ===
+
+$ cd /var/folders/rj/df9ksn5s735899fw3l79fzp80000gq/T//cdguard-live.fqQEmZ/firstmate && git status --short --branch
+  [tool blocked by cd-guard] [persistent-cd] a persistent top-level directory change in the primary firstmate checkout is blocked; it would move the shell out of the home so a later firstmate-owned command runs inside a project clone. Reach the target without moving the shell - use git -C <dir> or an absolute path on the command itself - or scope the cd to a subshell like (cd <dir> && ...).
+  agent shell cwd still: /var/folders/rj/df9ksn5s735899fw3l79fzp80000gq/T/cdguard-live.fqQEmZ/firstmate

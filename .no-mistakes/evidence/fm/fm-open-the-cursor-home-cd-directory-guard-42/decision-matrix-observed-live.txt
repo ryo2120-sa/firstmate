@@ -1,0 +1,20 @@
+COMMAND SUBMITTED BY THE AGENT                 GUARD  WHY
+---------------------------------------------- ------ ---
+cd <home>                                      ALLOW  Cursor prefix, no-op return to home
+cd <home> && git status                        ALLOW  Cursor prefix completes, tool returns
+cd <home>/ (trailing slash)                    ALLOW  same directory
+cd <symlink-to-home>                           ALLOW  realpaths to the home
+cd <home> && cd projects/foo                   DENY   second cd leaves the home
+cd projects/foo                                DENY   the original leak
+cd <home>/projects/foo                         DENY   absolute path out of the home
+cd <home>-evil                                 DENY   prefix collision, not the home
+cd <home>/<symlink-out>                        DENY   realpaths outside the home
+cd <home>/..                                   DENY   parent of the home
+cd -- <home>                                   DENY   option word, not a destination
+cd -P <home>                                   DENY   option word, not a destination
+cd .                                           DENY   relative, cwd unknown to the policy
+cd "$SOMEVAR"                                  DENY   unquoted expansion, not literal
+pushd <home>                                   DENY   still mutates the directory stack
+cd -                                           DENY   previous directory
+(cd <elsewhere> && ls)                         ALLOW  subshell, never persists
+git -C projects/foo status                     ALLOW  reaches target without moving shell

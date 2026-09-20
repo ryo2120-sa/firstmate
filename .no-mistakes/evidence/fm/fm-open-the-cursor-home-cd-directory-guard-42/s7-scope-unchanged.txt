@@ -1,0 +1,4 @@
+=== S7: scope is unchanged by the --home wiring - guard stays inert outside the primary checkout ===
+crewmate linked worktree,  cd out of home -> exit 0, output <empty>
+primary checkout,          cd out of home -> exit 2, [persistent-cd] a persistent top-level d...
+primary checkout,          cd to the home -> exit 0, output <empty>

@@ -1,0 +1,67 @@
+=== S2: every cd that leaves the home is still blocked (Cursor entry form) ===
+
+$ cd projects/foo
+  [tool blocked by cd-guard] [persistent-cd] a persistent top-level directory change in the primary firstmate checkout is blocked; it would move the shell out of the home so a later firstmate-owned command runs inside a project clone. Reach the target without moving the shell - use git -C <dir> or an absolute path on the command itself - or scope the cd to a subshell like (cd <dir> && ...).
+  agent shell cwd still: /var/folders/rj/df9ksn5s735899fw3l79fzp80000gq/T/cdguard-live.fqQEmZ/firstmate
+
+$ cd <LAB>/elsewhere
+  [tool blocked by cd-guard] [persistent-cd] a persistent top-level directory change in the primary firstmate checkout is blocked; it would move the shell out of the home so a later firstmate-owned command runs inside a project clone. Reach the target without moving the shell - use git -C <dir> or an absolute path on the command itself - or scope the cd to a subshell like (cd <dir> && ...).
+  agent shell cwd still: /var/folders/rj/df9ksn5s735899fw3l79fzp80000gq/T/cdguard-live.fqQEmZ/firstmate
+
+$ cd <LAB>/firstmate/projects/foo
+  [tool blocked by cd-guard] [persistent-cd] a persistent top-level directory change in the primary firstmate checkout is blocked; it would move the shell out of the home so a later firstmate-owned command runs inside a project clone. Reach the target without moving the shell - use git -C <dir> or an absolute path on the command itself - or scope the cd to a subshell like (cd <dir> && ...).
+  agent shell cwd still: /var/folders/rj/df9ksn5s735899fw3l79fzp80000gq/T/cdguard-live.fqQEmZ/firstmate
+
+$ cd <LAB>/firstmate-evil
+  [tool blocked by cd-guard] [persistent-cd] a persistent top-level directory change in the primary firstmate checkout is blocked; it would move the shell out of the home so a later firstmate-owned command runs inside a project clone. Reach the target without moving the shell - use git -C <dir> or an absolute path on the command itself - or scope the cd to a subshell like (cd <dir> && ...).
+  agent shell cwd still: /var/folders/rj/df9ksn5s735899fw3l79fzp80000gq/T/cdguard-live.fqQEmZ/firstmate
+
+$ cd <LAB>/firstmate/outlink
+  [tool blocked by cd-guard] [persistent-cd] a persistent top-level directory change in the primary firstmate checkout is blocked; it would move the shell out of the home so a later firstmate-owned command runs inside a project clone. Reach the target without moving the shell - use git -C <dir> or an absolute path on the command itself - or scope the cd to a subshell like (cd <dir> && ...).
+  agent shell cwd still: /var/folders/rj/df9ksn5s735899fw3l79fzp80000gq/T/cdguard-live.fqQEmZ/firstmate
+
+$ cd <LAB>/firstmate/..
+  [tool blocked by cd-guard] [persistent-cd] a persistent top-level directory change in the primary firstmate checkout is blocked; it would move the shell out of the home so a later firstmate-owned command runs inside a project clone. Reach the target without moving the shell - use git -C <dir> or an absolute path on the command itself - or scope the cd to a subshell like (cd <dir> && ...).
+  agent shell cwd still: /var/folders/rj/df9ksn5s735899fw3l79fzp80000gq/T/cdguard-live.fqQEmZ/firstmate
+
+$ cd -
+  [tool blocked by cd-guard] [persistent-cd] a persistent top-level directory change in the primary firstmate checkout is blocked; it would move the shell out of the home so a later firstmate-owned command runs inside a project clone. Reach the target without moving the shell - use git -C <dir> or an absolute path on the command itself - or scope the cd to a subshell like (cd <dir> && ...).
+  agent shell cwd still: /var/folders/rj/df9ksn5s735899fw3l79fzp80000gq/T/cdguard-live.fqQEmZ/firstmate
+
+$ pushd <LAB>/firstmate
+  [tool blocked by cd-guard] [persistent-cd] a persistent top-level directory change in the primary firstmate checkout is blocked; it would move the shell out of the home so a later firstmate-owned command runs inside a project clone. Reach the target without moving the shell - use git -C <dir> or an absolute path on the command itself - or scope the cd to a subshell like (cd <dir> && ...).
+  agent shell cwd still: /var/folders/rj/df9ksn5s735899fw3l79fzp80000gq/T/cdguard-live.fqQEmZ/firstmate
+
+$ cd <LAB>/firstmate && cd projects/foo
+  [tool blocked by cd-guard] [persistent-cd] a persistent top-level directory change in the primary firstmate checkout is blocked; it would move the shell out of the home so a later firstmate-owned command runs inside a project clone. Reach the target without moving the shell - use git -C <dir> or an absolute path on the command itself - or scope the cd to a subshell like (cd <dir> && ...).
+  agent shell cwd still: /var/folders/rj/df9ksn5s735899fw3l79fzp80000gq/T/cdguard-live.fqQEmZ/firstmate
+
+$ cd <LAB>/firstmate/projects/foo && tasks-axi add x
+  [tool blocked by cd-guard] [persistent-cd] a persistent top-level directory change in the primary firstmate checkout is blocked; it would move the shell out of the home so a later firstmate-owned command runs inside a project clone. Reach the target without moving the shell - use git -C <dir> or an absolute path on the command itself - or scope the cd to a subshell like (cd <dir> && ...).
+  agent shell cwd still: /var/folders/rj/df9ksn5s735899fw3l79fzp80000gq/T/cdguard-live.fqQEmZ/firstmate
+
+=== S3: option-form and relative destinations named by the contract stay denied ===
+
+$ cd -- <LAB>/firstmate
+  [tool blocked by cd-guard] [persistent-cd] a persistent top-level directory change in the primary firstmate checkout is blocked; it would move the shell out of the home so a later firstmate-owned command runs inside a project clone. Reach the target without moving the shell - use git -C <dir> or an absolute path on the command itself - or scope the cd to a subshell like (cd <dir> && ...).
+  agent shell cwd still: /var/folders/rj/df9ksn5s735899fw3l79fzp80000gq/T/cdguard-live.fqQEmZ/firstmate
+
+$ cd -P <LAB>/firstmate
+  [tool blocked by cd-guard] [persistent-cd] a persistent top-level directory change in the primary firstmate checkout is blocked; it would move the shell out of the home so a later firstmate-owned command runs inside a project clone. Reach the target without moving the shell - use git -C <dir> or an absolute path on the command itself - or scope the cd to a subshell like (cd <dir> && ...).
+  agent shell cwd still: /var/folders/rj/df9ksn5s735899fw3l79fzp80000gq/T/cdguard-live.fqQEmZ/firstmate
+
+$ cd -L <LAB>/firstmate
+  [tool blocked by cd-guard] [persistent-cd] a persistent top-level directory change in the primary firstmate checkout is blocked; it would move the shell out of the home so a later firstmate-owned command runs inside a project clone. Reach the target without moving the shell - use git -C <dir> or an absolute path on the command itself - or scope the cd to a subshell like (cd <dir> && ...).
+  agent shell cwd still: /var/folders/rj/df9ksn5s735899fw3l79fzp80000gq/T/cdguard-live.fqQEmZ/firstmate
+
+$ cd .
+  [tool blocked by cd-guard] [persistent-cd] a persistent top-level directory change in the primary firstmate checkout is blocked; it would move the shell out of the home so a later firstmate-owned command runs inside a project clone. Reach the target without moving the shell - use git -C <dir> or an absolute path on the command itself - or scope the cd to a subshell like (cd <dir> && ...).
+  agent shell cwd still: /var/folders/rj/df9ksn5s735899fw3l79fzp80000gq/T/cdguard-live.fqQEmZ/firstmate
+
+$ cd bin/..
+  [tool blocked by cd-guard] [persistent-cd] a persistent top-level directory change in the primary firstmate checkout is blocked; it would move the shell out of the home so a later firstmate-owned command runs inside a project clone. Reach the target without moving the shell - use git -C <dir> or an absolute path on the command itself - or scope the cd to a subshell like (cd <dir> && ...).
+  agent shell cwd still: /var/folders/rj/df9ksn5s735899fw3l79fzp80000gq/T/cdguard-live.fqQEmZ/firstmate
+
+$ cd "$HOME_DIR"
+  [tool blocked by cd-guard] [persistent-cd] a persistent top-level directory change in the primary firstmate checkout is blocked; it would move the shell out of the home so a later firstmate-owned command runs inside a project clone. Reach the target without moving the shell - use git -C <dir> or an absolute path on the command itself - or scope the cd to a subshell like (cd <dir> && ...).
+  agent shell cwd still: /var/folders/rj/df9ksn5s735899fw3l79fzp80000gq/T/cdguard-live.fqQEmZ/firstmate
