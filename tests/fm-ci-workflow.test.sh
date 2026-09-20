@@ -135,12 +135,13 @@ CAPS
 # Cancellation makes an undersized cap costlier: a falsely tripped job now also
 # discards a run nobody replaced. These bounds were measured, not guessed.
 # tests-portable-parallel-1/2 were widened from 10 to 15 minutes on
-# 2026-09-20: six consecutive green runs that day (35521389413, 35522119589,
-# 35525714064, 35527851430, 35530147547, 35530818396) show each shard's own
-# fm-test-timing-portable-parallel-*.json completing in 6.34-9.71 actual
-# measured minutes, so the prior 10-minute cap left as little as ~17 seconds
-# of margin on the slowest observed run. This must fail against that prior
-# 10-minute value, not just assert the field is present.
+# 2026-09-20, measured from JOB wall time (not test-step time, which omits
+# checkout/setup/upload overhead): across six consecutive green runs that
+# day (35521389413, 35522119589, 35525714064, 35527851430, 35530147547,
+# 35530818396), shard 1's worst observed job reached the full 10m00s
+# against the prior 10-minute cap (run 35527851430), leaving only seconds
+# of real margin. This must fail against that prior 10-minute value, not
+# just assert the field is present.
 test_measured_lanes_keep_their_existing_bounds() {
   local job expected actual
   while read -r job expected; do
