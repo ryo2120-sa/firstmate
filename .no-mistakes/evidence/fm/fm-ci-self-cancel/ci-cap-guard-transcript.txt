@@ -1,0 +1,37 @@
+### 1. Shipped workflow: the cap guard passes
+$ bash tests/fm-ci-workflow.test.sh
+ok - a newer push to one PR supersedes that PR's in-flight CI
+ok - distinct PRs get distinct concurrency groups
+ok - every main push keeps its own group and is never cancelled
+ok - every ci.yml job carries a finite timeout
+ok - the incident's unbounded jobs keep their recommended caps
+ok - the already-measured lane bounds hold, including shard 1's widened cap
+exit=0
+
+### 2. Regression reproduction: same guard against the pre-fix 10-minute shard-1 cap
+$ bash tests/fm-ci-workflow.test.sh   # ci.yml reverted to timeout-minutes: 10
+ok - a newer push to one PR supersedes that PR's in-flight CI
+ok - distinct PRs get distinct concurrency groups
+ok - every main push keeps its own group and is never cancelled
+ok - every ci.yml job carries a finite timeout
+ok - the incident's unbounded jobs keep their recommended caps
+not ok - tests-portable-parallel-1 timeout must stay 15 minutes, got 10
+exit=1
+
+### 3. Adversarial: same-PR supersession removed from the concurrency group
+not ok - two runs of one PR must share a concurrency group, got ci-CI-pull_request-900001 and ci-CI-pull_request-900002
+exit=1
+
+### 4. Adversarial: cancel-in-progress made unconditional (would cancel main pushes)
+ok - a newer push to one PR supersedes that PR's in-flight CI
+ok - distinct PRs get distinct concurrency groups
+not ok - push runs must never cancel an in-progress run, got true
+exit=1
+
+### 5. Adversarial: shard-1 cap deleted entirely (unbounded hang)
+ok - a newer push to one PR supersedes that PR's in-flight CI
+ok - distinct PRs get distinct concurrency groups
+ok - every main push keeps its own group and is never cancelled
+not ok - these CI jobs have no finite hang tripwire:
+tests-portable-parallel-1: nil
+exit=1

@@ -1,0 +1,29 @@
+# What GitHub Actions will actually see: semantic YAML diff, base 97075f8 -> target 4f3f65f
+
+Both files parsed with Ruby's YAML loader (the workflow as a machine reads it, not as text),
+flattened to leaf paths, and compared. Comments are not part of the parsed model.
+
+leaf nodes compared : 159
+leaf nodes changed  : 1
+
+  .jobs.tests-portable-parallel-1.timeout-minutes
+    base   : 10
+    target : 15
+
+Forbidden-change checks (must be identical to base):
+  on.pull_request      base={}
+                     target={}
+  concurrency.group    UNCHANGED -> ci-${{ github.workflow }}-${{ github.event_name }}-${{ github.event.pull_request.number || github.run_id }}
+  cancel-in-progress   UNCHANGED -> ${{ github.event_name == 'pull_request' }}
+  pull_request types   absent (no edited carve-out)
+
+Per-job timeout-minutes, base vs target:
+  lint                          25 ->  25
+  test-coverage                  5 ->   5
+  tests-portable-parallel-1     10 ->  15   <== CHANGED
+  tests-portable-parallel-2     10 ->  10
+  tests-portable-serial         30 ->  30
+  tests-herdr                   75 ->  75
+  tests-timing-aggregate         5 ->   5
+  macos-stock-bash              10 ->  10
+  invariants                     5 ->   5
