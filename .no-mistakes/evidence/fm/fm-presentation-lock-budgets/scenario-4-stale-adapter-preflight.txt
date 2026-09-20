@@ -1,0 +1,42 @@
+############ SCENARIO 4 (adversarial): stale/partially-restored Herdr adapter ############
+bin/backends/herdr.sh has fm_backend_herdr_presentation_lock_wait_attempts renamed away,
+then the real fm-teardown.sh CLI is run under set -eu.
+
+=== A: stale adapter WITH this change's prerequisite registration ===
+  prerequisite list:
+    teardown_herdr_require_prerequisites() {  # <task-id>
+      local task_id=$1 prerequisite
+      if ! fm_backend_source herdr; then
+        echo "error: herdr teardown prerequisites are unavailable for $task_id; nothing was changed - restore the adapter and rerun teardown" >&2
+        return 1
+      fi
+      for prerequisite in \
+        fm_backend_herdr_parse_target \
+        fm_backend_herdr_pane_presence_state \
+        fm_backend_herdr_workspace_presence_state \
+        fm_backend_herdr_endpoint_confirmed_gone \
+        fm_backend_herdr_explicit_close_pane_confirmed \
+        fm_backend_herdr_presentation_session_lock_path \
+        fm_backend_herdr_presentation_lock_wait_attempts; do
+  with-registration: exit=1
+  stderr: error: herdr teardown prerequisites are unavailable for task-x1; nothing was changed - restore the adapter and rerun teardown|
+  pane closed=no  metadata kept=yes
+
+=== B: same stale adapter WITHOUT the prerequisite registration (counterfactual) ===
+  prerequisite list:
+    teardown_herdr_require_prerequisites() {  # <task-id>
+      local task_id=$1 prerequisite
+      if ! fm_backend_source herdr; then
+        echo "error: herdr teardown prerequisites are unavailable for $task_id; nothing was changed - restore the adapter and rerun teardown" >&2
+        return 1
+      fi
+      for prerequisite in \
+        fm_backend_herdr_parse_target \
+        fm_backend_herdr_pane_presence_state \
+        fm_backend_herdr_workspace_presence_state \
+        fm_backend_herdr_endpoint_confirmed_gone \
+        fm_backend_herdr_explicit_close_pane_confirmed \
+        fm_backend_herdr_presentation_session_lock_path; do
+  without-registration: exit=1
+  stderr: /private/var/folders/rj/df9ksn5s735899fw3l79fzp80000gq/T/fm-teardown-tests.ProTbd/stale-without-registration/test-root/bin/fm-teardown.sh: line 2898: fm_backend_herdr_presentation_lock_wait_attempts: command not found|/private/var/folders/rj/df9ksn5s735899fw3l79fzp80000gq/T/fm-teardown-tests.ProTbd/stale-without-registration/test-root/bin/fm-teardown.sh: line 2899: [: : integer expected|error: herdr session presentation lock is contended for task-x1; nothing was changed - rerun teardown once the contention clears|
+  pane closed=no  metadata kept=yes

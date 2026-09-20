@@ -1,0 +1,19 @@
+############ SCENARIO 2: pane kill vs a peer's legitimate 12s hold ############
+Real fm_backend_kill herdr dispatcher (bin/fm-backend.sh), real on-disk lock,
+real peer holder process, real 0.1s waits.
+
+---- base commit 97075f8 (pre-fix: kill gives up after ~5s) ----
+DRIVING CODE TREE: /tmp/fm-prefix
+--- kill-peer-hold: peer holds /tmp/firstmate-herdr-presentation/order-e8d220dda2e75df000d04214b0fa2d01.lock for 12s; running real fm_backend_kill herdr ---
+elapsed=10s output: warning: herdr task kill could not acquire its session presentation lock; refusing an unlocked pane close
+herdr calls: session list --json --session default|status --json --session default|session list --json --session default|
+RESULT kill-peer-hold: REFUSED the pane close after 10s (pane left alive)
+DRIVER EXIT=1
+
+---- target commit 1a1449a (post-fix: shared ~70s budget) ----
+DRIVING CODE TREE: /Users/nguyenl8/.no-mistakes/worktrees/8642b6d0ddaf/01M309TXGK3YTVT29XXZSR97E5
+--- kill-peer-hold: peer holds /tmp/firstmate-herdr-presentation/order-18c9dfee3d6aa35d307ccf092f5f96dc.lock for 12s; running real fm_backend_kill herdr ---
+elapsed=14s output: <none>
+herdr calls: session list --json --session default|status --json --session default|session list --json --session default|workspace list --session default|tab list --workspace wH --session default|pane get wG:pQ --session default|tab list --workspace wG --session default|pane list --workspace wG --session default|workspace list --session default|pane process-info --pane wG:pQ --session default|pane process-info --pane wG:pQ --session default|pane process-info --pane wG:pQ --session default|pane process-info --pane wG:pQ --session default|pane process-info --pane wG:pQ --session default|pane process-info --pane wG:pQ --session default|pane process-info --pane wG:pQ --session default|pane process-info --pane wG:pQ --session default|pane process-info --pane wG:pQ --session default|pane process-info --pane wG:pQ --session default|pane close wG:pQ --session default|pane get wG:pQ --session default|workspace list --session default|tab list --workspace wH --session default|
+RESULT kill-peer-hold: CLOSED the pane after 14s
+DRIVER EXIT=0

@@ -1,0 +1,20 @@
+Live drive: Herdr presentation-lock wait budget across the three blocking waiters
+Each run holds the REAL shared session presentation lock from a REAL peer process,
+with REAL wall-clock 0.1s waits (nothing stubbed), then runs the real CLI.
+
+############ SCENARIO 1: concurrent teardown vs a peer's legitimate 20s hold ############
+---- base commit 97075f8 (pre-fix: teardown gives up after ~5s) ----
+DRIVING CODE TREE: /tmp/fm-prefix
+--- teardown-peer-hold: peer holds /tmp/firstmate-herdr-presentation/order-27773c91b7aadb478e8301c4db537332.lock for 20s; running real fm-teardown.sh ---
+exit=1 elapsed=9s
+stderr: error: herdr session presentation lock is contended for task-x1; nothing was changed - rerun teardown once the contention clears|
+RESULT teardown-peer-hold: REFUSED (contended) after 9s; pane closed=no; worktree returned=no
+DRIVER EXIT=1
+
+---- target commit 1a1449a (post-fix: shared ~70s budget) ----
+DRIVING CODE TREE: /Users/nguyenl8/.no-mistakes/worktrees/8642b6d0ddaf/01M309TXGK3YTVT29XXZSR97E5
+--- teardown-peer-hold: peer holds /tmp/firstmate-herdr-presentation/order-35206206835667483ff644b8bfd8f56b.lock for 20s; running real fm-teardown.sh ---
+exit=0 elapsed=22s
+stderr: 
+RESULT teardown-peer-hold: COMPLETED after 22s (pane closed, isolated copy returned, metadata removed)
+DRIVER EXIT=0

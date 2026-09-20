@@ -1,0 +1,13 @@
+ok - real Herdr lab: an opted-out spawn retains the Stage 1 Herdr command sequence with zero ordering calls
+ok - real Herdr lab: a home that configured nothing is projected by default on herdr 0.9.0
+ok - real Herdr lab: every projected create, task-tab create, seeded prune, and move preserves active workspace and tab
+ok - real Herdr lab: persisted-focused seeded prune proceeds when no live client is attached
+ok - real Herdr lab: bounded lock contention warns and falls back flat without projection or focus drift
+not ok - workspace order was not firstmate, stable primary block, secondmates: firstmate
+2ndmate-alpha
+2ndmate-bravo
+└ shape · p:ujnn5iqGZkpCwZKXIiJz-Q
+└ order-b · p:xgkM_vOON9vHfeEUrUxrSg
+└ order-a · p:mQKYoqVWlLewiSd0mF_UTQ
+bash tests/fm-backend-herdr-presentation-e2e.test.sh  17.58s user 24.05s system 43% cpu 1:36.36 total
+EXIT=1

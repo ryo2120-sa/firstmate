@@ -1,0 +1,27 @@
+############ SCENARIO 3 (adversarial): a bad operator-set override must not collapse the waiter ############
+Peer holds the real lock for 20s. Production budget is 700 attempts (~70s).
+
+---- FM_BACKEND_HERDR_PRESENTATION_LOCK_WAIT_ATTEMPTS=0 (must be ignored) ----
+DRIVING CODE TREE: /Users/nguyenl8/.no-mistakes/worktrees/8642b6d0ddaf/01M309TXGK3YTVT29XXZSR97E5
+--- teardown-zero-override: peer holds /tmp/firstmate-herdr-presentation/order-4cea88bb761ee57ea0d4b078e5add563.lock for 20s; running real fm-teardown.sh ---
+exit=0 elapsed=22s
+stderr: 
+RESULT teardown-zero-override: COMPLETED after 22s (pane closed, isolated copy returned, metadata removed)
+DRIVER EXIT=0
+
+---- FM_BACKEND_HERDR_PRESENTATION_LOCK_WAIT_ATTEMPTS=abc (must be ignored) ----
+DRIVING CODE TREE: /Users/nguyenl8/.no-mistakes/worktrees/8642b6d0ddaf/01M309TXGK3YTVT29XXZSR97E5
+--- teardown-garbage-override: peer holds /tmp/firstmate-herdr-presentation/order-abc4f676be9247b8b8f85aa71261a71f.lock for 20s; running real fm-teardown.sh ---
+exit=0 elapsed=22s
+stderr: 
+RESULT teardown-garbage-override: COMPLETED after 22s (pane closed, isolated copy returned, metadata removed)
+DRIVER EXIT=0
+
+---- FM_BACKEND_HERDR_PRESENTATION_LOCK_WAIT_ATTEMPTS=3 (valid test injection, must apply) ----
+DRIVING CODE TREE: /Users/nguyenl8/.no-mistakes/worktrees/8642b6d0ddaf/01M309TXGK3YTVT29XXZSR97E5
+--- teardown-small-override: peer holds /tmp/firstmate-herdr-presentation/order-c08043e1549204381e04bf8c037506ce.lock for 20s; running real fm-teardown.sh ---
+exit=1 elapsed=1s
+stderr: error: herdr session presentation lock is contended for task-x1; nothing was changed - rerun teardown once the contention clears|
+RESULT teardown-small-override: REFUSED (contended) after 1s; pane closed=no; worktree returned=no
+DRIVER EXIT=1
+
