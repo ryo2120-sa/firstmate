@@ -148,10 +148,12 @@ jobs:
   tests-portable-parallel-2:
     name: Behavior portable parallel 2
     runs-on: ubuntu-latest
-    # Kept at the original 10-minute hang tripwire: unlike shard 1 above,
-    # this shard's measured job wall time from the same sampled runs
-    # (worst observed 8m22s, run 35522119589) leaves comfortable margin
-    # under this cap, so no evidenced widen applies here.
+    # Kept at the original 10-minute hang tripwire. Measured job wall
+    # time from the same sampled runs peaks at 8m22s (run 35522119589),
+    # about 1.19x under this cap - knowingly below the ~1.5x headroom
+    # shard 1 now uses. No measured run has hit this cap, so nothing
+    # evidences a widen here, and widening it is out of scope for this
+    # task.
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v6
