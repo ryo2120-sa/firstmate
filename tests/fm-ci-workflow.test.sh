@@ -137,8 +137,7 @@ CAPS
 # tests-portable-parallel-1 was widened from 10 to 15 minutes on 2026-09-20
 # (evidence and provenance: the job comment in .github/workflows/ci.yml).
 # This must fail against that prior 10-minute value, not just assert the
-# field is present. tests-portable-parallel-2 stays at 10: its measured job
-# wall time left comfortable margin, so it is not widened.
+# field is present.
 test_measured_lanes_keep_their_existing_bounds() {
   local job expected actual
   while read -r job expected; do

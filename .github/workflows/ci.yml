@@ -80,9 +80,7 @@ jobs:
     # and completed job timings, allowing for setup and runner-speed spread.
     # A packed hint sum is not a measured job wall time or proof of headroom.
     # Evidence and refresh procedure: docs/fm-test-portable-shards.md.
-    # Changes to this cap or the lane count require a separate scope decision;
-    # this widen is that authorized decision for this task, scoped to this
-    # shard only (see shard 2 below, which is not widened).
+    # Changes to this cap or the lane count require a separate scope decision.
     # Widened from 10 to 15 minutes on 2026-09-20, based on measured JOB
     # wall time (each run's Actions job started_at/completed_at, which
     # includes checkout/setup/upload overhead beyond the test-step time
@@ -94,17 +92,14 @@ jobs:
     # cited as evidence, not that they ran against the 10-minute cap
     # themselves. Measured job wall time ranged from about 7m09s to
     # 10m00s (run 35527851430, the slowest). Compared against the
-    # 10-minute cap this branch carried before this change, that range
-    # left as little as no real margin on the slowest observed run, a
-    # hang tripwire that can fire on an ordinary passing run. 15 minutes
-    # restores comfortable headroom above the measured maximum, roughly
+    # previous 10-minute cap, that range left as little as no real
+    # margin on the slowest observed run, a hang tripwire that can fire
+    # on an ordinary passing run. 15 minutes restores comfortable
+    # headroom above the measured maximum, roughly
     # the same ratio the portable serial lane keeps (~20m measured
     # against its 30m cap) and Lint keeps (14-16m measured against its
     # 25m cap). An undersized cap here discards work nobody replaced (see
-    # the test file for that framing). This does not address the
-    # separate Lint job overrun from the same incident, which is a known
-    # hosted-runner memory problem tracked outside this task; Lint's own
-    # cap is unchanged.
+    # the test file for that framing).
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v6
