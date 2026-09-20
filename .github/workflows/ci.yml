@@ -16,10 +16,22 @@ permissions:
 # main push gets its own group and is never cancelled. Cancellation is likewise
 # limited to pull_request events. Evidence and rationale: the September 12
 # Actions starvation report, section 3 "Workflow mechanics to ship first".
+#
+# A pull_request "edited" action carries no new commit: it fires whenever a
+# PR's metadata changes for the commit already under validation, including
+# the no-mistakes pipeline's own mid-run PR-body edit. GitHub still creates a
+# workflow run and evaluates its concurrency group for that action even
+# though this workflow's default types (opened/synchronize/reopened) mean no
+# job of that run executes, so an unqualified shared group lets a same-commit
+# body edit cancel the real CI run still validating that commit. Give the
+# edited action its own immutable per-run group instead, so it can never
+# collide with the shared per-PR group; genuine pushes (opened, synchronize,
+# reopened) keep sharing that group so true supersession is unaffected.
+# no-mistakes-required.yml already isolates body-bearing events the same way.
 # The compliance workflow deliberately keeps its own event-specific groups; do
 # not collapse it onto this simpler shape.
 concurrency:
-  group: ci-${{ github.workflow }}-${{ github.event_name }}-${{ github.event.pull_request.number || github.run_id }}
+  group: ci-${{ github.workflow }}-${{ github.event_name }}-${{ github.event.action == 'edited' && github.run_id || github.event.pull_request.number || github.run_id }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:

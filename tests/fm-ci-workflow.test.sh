@@ -22,10 +22,13 @@ command -v ruby >/dev/null 2>&1 \
   || fail "ruby is required to parse .github/workflows/ci.yml as YAML"
 
 # Resolve the workflow's concurrency contract under one simulated event and
-# print "<group><TAB><cancel-in-progress>". Only the two expression constructs
-# this workflow uses are resolved: an `a || b` fallback and an `==` comparison.
+# print "<group><TAB><cancel-in-progress>". Only the expression constructs
+# this workflow uses are resolved: an `a || b` fallback, an `a && b` guard
+# (GitHub Actions semantics: returns b when a is truthy, otherwise falls
+# through to the next `||` alternative), and an `==` comparison.
 resolve_concurrency() {
-  local event=$1 pr_number=$2 run_id=$3
+  local event=$1 pr_number=$2 run_id=$3 action=${4:-}
+  # shellcheck disable=SC2016 # Ruby, not the shell, expands $ARGV/${{...}}.
   ruby -ryaml -e '
 doc = YAML.load_file(ARGV[0])
 concurrency = doc.fetch("concurrency")
@@ -34,6 +37,7 @@ context = {
   "github.event_name" => ARGV[1],
   "github.event.pull_request.number" => ARGV[2],
   "github.run_id" => ARGV[3],
+  "github.event.action" => ARGV[4],
 }
 
 value = lambda do |token|
@@ -43,13 +47,31 @@ value = lambda do |token|
   context.fetch(token)
 end
 
+# Evaluate one `||`-separated term, which may itself be an `a == b && c`
+# guard. Returns the resolved string, or nil when the term is falsy (either
+# an empty context value, or a guard whose condition did not hold).
+evaluate_term = lambda do |term|
+  term = term.strip
+  if term.include?("&&")
+    condition, consequent = term.split("&&", 2)
+    condition = condition.strip
+    next nil unless condition.include?("==")
+    left, right = condition.split("==", 2)
+    next nil unless value.call(left) == value.call(right)
+    resolved = value.call(consequent)
+    next resolved.empty? ? nil : resolved
+  end
+  resolved = value.call(term)
+  resolved.empty? ? nil : resolved
+end
+
 evaluate = lambda do |expression|
   expression = expression.strip
-  if expression.include?("==")
+  if expression.include?("==") && !expression.include?("&&")
     left, right = expression.split("==", 2)
     next value.call(left) == value.call(right) ? "true" : "false"
   end
-  resolved = expression.split("||").map { |token| value.call(token) }.find { |v| !v.empty? }
+  resolved = expression.split("||").map { |term| evaluate_term.call(term) }.find { |v| v }
   resolved.to_s
 end
 
@@ -59,7 +81,7 @@ end
 
 puts [interpolate.call(concurrency.fetch("group")),
       interpolate.call(concurrency.fetch("cancel-in-progress"))].join("\t")
-' "$CI_WORKFLOW" "$event" "$pr_number" "$run_id"
+' "$CI_WORKFLOW" "$event" "$pr_number" "$run_id" "$action"
 }
 
 job_timeout() {
@@ -151,9 +173,52 @@ CAPS
   pass "the already-measured lane bounds are unchanged"
 }
 
+# A pull_request body edit (github.event.action == edited), such as the
+# no-mistakes pipeline's own mid-run PR-body update, carries no new commit.
+# It must never share the per-PR group that real head-change actions use for
+# that same PR, so it can never cancel a genuine in-flight CI run validating
+# that commit. Reproduces the September 20 self-cancel incident: eleven jobs
+# had passed and two were still running when the pipeline's own body edit
+# collided with the shared group and killed them with no verdict.
+test_pr_body_edit_does_not_share_the_pr_group() {
+  local opened edited
+  opened=$(resolve_concurrency pull_request 108 900001 opened) || fail "could not resolve PR concurrency"
+  edited=$(resolve_concurrency pull_request 108 900002 edited) || fail "could not resolve edited-action concurrency"
+  [ "$(group_of "$opened")" != "$(group_of "$edited")" ] \
+    || fail "a PR body edit must not share the PR's concurrency group ($(group_of "$opened"))"
+  pass "a PR body edit gets its own concurrency group, isolated from the PR's group"
+}
+
+# Two body edits on the same PR must not collide with each other either,
+# since each is keyed by its own unique run id.
+test_two_pr_body_edits_do_not_collide() {
+  local first second
+  first=$(resolve_concurrency pull_request 108 900002 edited) || fail "could not resolve edited-action concurrency"
+  second=$(resolve_concurrency pull_request 108 900003 edited) || fail "could not resolve edited-action concurrency"
+  [ "$(group_of "$first")" != "$(group_of "$second")" ] \
+    || fail "two distinct PR body edits must not share a concurrency group ($(group_of "$first"))"
+  pass "distinct PR body edits get distinct concurrency groups"
+}
+
+# Genuine head changes (opened/synchronize/reopened) must still supersede
+# each other within one PR even after the edited-action carve-out.
+test_pr_pushes_still_supersede_after_edited_carve_out() {
+  local first second
+  first=$(resolve_concurrency pull_request 108 900001 synchronize) || fail "could not resolve PR concurrency"
+  second=$(resolve_concurrency pull_request 108 900004 synchronize) || fail "could not resolve PR concurrency"
+  [ "$(group_of "$first")" = "$(group_of "$second")" ] \
+    || fail "two synchronize runs of one PR must still share a concurrency group, got $(group_of "$first") and $(group_of "$second")"
+  [ "$(cancel_of "$first")" = true ] \
+    || fail "synchronize runs must still cancel the in-progress run, got $(cancel_of "$first")"
+  pass "genuine pushes still supersede within one PR after the edited-action carve-out"
+}
+
 test_pr_pushes_supersede_within_one_pr
 test_separate_prs_do_not_cancel_each_other
 test_main_pushes_are_never_cancelled
 test_every_job_has_a_finite_timeout
 test_previously_unbounded_jobs_keep_their_caps
 test_measured_lanes_keep_their_existing_bounds
+test_pr_body_edit_does_not_share_the_pr_group
+test_two_pr_body_edits_do_not_collide
+test_pr_pushes_still_supersede_after_edited_carve_out
