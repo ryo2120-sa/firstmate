@@ -141,7 +141,11 @@
 #   same path. It adds --tui-mode regular only when that help advertises the flag;
 #   a failed or inconclusive probe omits it so older Pi versions remain launchable.
 #   A missing selected executable refuses before endpoint creation, and pi-signed
-#   never falls back to pi.
+#   never falls back to pi. Every Firstmate-launched pi or pi-signed worker,
+#   including secondmates, relaunches, and raw launch commands, is pinned to
+#   PI_CLAUDE_CODE_PROVIDER_IDLE_TIMEOUT_MS=1800000, replacing any ambient value
+#   in either direction, so the approved 30-minute Claude provider idle limit is
+#   what every Firstmate-launched Pi actually runs with.
 #   For omp (Oh My Pi), fm-spawn resolves the `omp` executable from PATH once and
 #   refuses when it is absent. Every omp launch clears the foreign harness
 #   markers (omp publishes none of its own), sets the Firstmate-owned
@@ -1807,7 +1811,7 @@ case "$HARNESS" in
       PI_TUI_MODE=' --tui-mode regular'
     fi
     LAUNCH=${LAUNCH//__PITUIMODE__/$PI_TUI_MODE}
-    LAUNCH="FM_PI_HARNESS=$HARNESS $LAUNCH"
+    LAUNCH="FM_PI_HARNESS=$HARNESS PI_CLAUDE_CODE_PROVIDER_IDLE_TIMEOUT_MS=1800000 $LAUNCH"
     ;;
   cursor)
     # `cursor` is not the CLI name, and the legacy alias `agent` is far too

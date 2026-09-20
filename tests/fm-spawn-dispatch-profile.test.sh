@@ -24,6 +24,8 @@ if [ "${1:-}" = --help ]; then
   else
     printf '%s\n' "Pi ${FM_FAKE_PI_VERSION:-0.84.0}" 'Options: --help --tui-mode <mode>'
   fi
+elif [ -n "${FM_FAKE_PI_ENV_LOG:-}" ]; then
+  printf '%s\n' "${PI_CLAUDE_CODE_PROVIDER_IDLE_TIMEOUT_MS-<unset>}" > "$FM_FAKE_PI_ENV_LOG"
 fi
 exit 0
 SH
@@ -657,13 +659,70 @@ test_pi_threads_model_and_max_effort() {
   expect_code 0 "$status" "pi spawn with max effort should succeed"
   assert_meta_profile "$HOME_DIR/state/$id.meta" pi openai-codex/gpt-5.6-sol max
   launch=$(cat "$LAUNCH_LOG")
-  assert_contains "$launch" "FM_PI_HARNESS=pi '$FAKEBIN_DIR/pi' --tui-mode regular --model 'openai-codex/gpt-5.6-sol' --thinking 'max' -e" \
+  assert_contains "$launch" "FM_PI_HARNESS=pi PI_CLAUDE_CODE_PROVIDER_IDLE_TIMEOUT_MS=1800000 '$FAKEBIN_DIR/pi' --tui-mode regular --model 'openai-codex/gpt-5.6-sol' --thinking 'max' -e" \
     "pi launch did not force the regular TUI while threading the requested model and max thinking level"
   assert_not_contains "$launch" "FM_FIRSTMATE_PI_LAUNCH_BRIEF=" \
     "pi launch still exports the removed Calm input-reroute binding"
   assert_contains "$launch" "fm-operational-input.sh' encode launch-brief" \
     "pi launch lost the canonical typed launch-brief envelope"
   pass "pi receives --model and --thinking max profile flags"
+}
+
+test_pi_family_launch_sets_fixed_idle_timeout() {
+  local harness kind rec id out launch envlog sm status
+  for harness in pi pi-signed; do
+    for kind in worker secondmate; do
+      id="profile-${harness}-idle-${kind}-z8e"
+      rec=$(make_spawn_case "profile-${harness}-idle-${kind}" "$harness" "$id")
+      read_case_record "$rec"
+      envlog="$CASE_DIR/pi-env.log"
+      if [ "$kind" = secondmate ]; then
+        printf '%s\n' "$harness" > "$HOME_DIR/config/secondmate-harness"
+        sm="$CASE_DIR/secondmate-home"
+        make_seeded_secondmate_home "$sm" "$id"
+        sm=$(cd "$sm" && pwd -P)
+        cp "$ROOT/AGENTS.md" "$sm/AGENTS.md"
+        out=$(PI_CLAUDE_CODE_PROVIDER_IDLE_TIMEOUT_MS=300000 FM_FAKE_PI_ENV_LOG="$envlog" \
+          run_spawn "$HOME_DIR" "$WT_DIR" "$FAKEBIN_DIR" "$LAUNCH_LOG" "$id" "$sm" --secondmate)
+      else
+        out=$(PI_CLAUDE_CODE_PROVIDER_IDLE_TIMEOUT_MS=300000 FM_FAKE_PI_ENV_LOG="$envlog" \
+          run_ship_spawn "$HOME_DIR" "$WT_DIR" "$FAKEBIN_DIR" "$LAUNCH_LOG" "$id" "$PROJ_DIR" \
+            --harness "$harness")
+      fi
+      status=$?
+      expect_code 0 "$status" "$harness $kind spawn should succeed: $out"
+      launch=$(cat "$LAUNCH_LOG")
+      PI_CLAUDE_CODE_PROVIDER_IDLE_TIMEOUT_MS=300000 FM_FAKE_PI_ENV_LOG="$envlog" \
+        PATH="$FAKEBIN_DIR:$PATH" bash -c "$launch" \
+        || fail "$harness $kind launch command failed"
+      [ "$(cat "$envlog")" = 1800000 ] \
+        || fail "$harness $kind launch did not force the 30-minute idle timeout: $(cat "$envlog")"
+    done
+  done
+  pass "Pi and pi-signed workers and secondmates receive the fixed 30-minute Claude provider idle timeout"
+}
+
+test_raw_pi_launch_receives_fixed_idle_timeout() {
+  local rec id out status launch envlog
+  id=profile-pi-raw-idle-z8f
+  rec=$(make_spawn_case profile-pi-raw-idle pi "$id")
+  read_case_record "$rec"
+  envlog="$CASE_DIR/pi-env.log"
+
+  out=$(PI_CLAUDE_CODE_PROVIDER_IDLE_TIMEOUT_MS=300000 FM_FAKE_PI_ENV_LOG="$envlog" \
+    run_ship_spawn "$HOME_DIR" "$WT_DIR" "$FAKEBIN_DIR" "$LAUNCH_LOG" "$id" "$PROJ_DIR" \
+      'pi --tui-mode regular')
+  status=$?
+  expect_code 0 "$status" "raw pi launch should succeed: $out"
+  assert_meta_profile "$HOME_DIR/state/$id.meta" pi default default
+  launch=$(cat "$LAUNCH_LOG")
+  assert_contains "$launch" "pi --tui-mode regular" "raw pi launch command was rewritten"
+  PI_CLAUDE_CODE_PROVIDER_IDLE_TIMEOUT_MS=300000 FM_FAKE_PI_ENV_LOG="$envlog" \
+    PATH="$FAKEBIN_DIR:$PATH" bash -c "$launch" \
+    || fail "raw pi launch command failed"
+  [ "$(cat "$envlog")" = 1800000 ] \
+    || fail "raw pi launch did not force the 30-minute idle timeout: $(cat "$envlog")"
+  pass "the raw Pi launch escape hatch receives the fixed 30-minute Claude provider idle timeout"
 }
 
 test_pi_signed_threads_shared_pi_profile_and_preserves_identity() {
@@ -679,7 +738,7 @@ test_pi_signed_threads_shared_pi_profile_and_preserves_identity() {
   assert_contains "$out" "spawned $id harness=pi-signed" "pi-signed spawn did not preserve its visible identity"
   assert_meta_profile "$HOME_DIR/state/$id.meta" pi-signed openai-codex/gpt-5.6-sol max
   launch=$(cat "$LAUNCH_LOG")
-  assert_contains "$launch" "FM_PI_HARNESS=pi-signed '$FAKEBIN_DIR/pi-signed' --tui-mode regular --model 'openai-codex/gpt-5.6-sol' --thinking 'max' -e" \
+  assert_contains "$launch" "FM_PI_HARNESS=pi-signed PI_CLAUDE_CODE_PROVIDER_IDLE_TIMEOUT_MS=1800000 '$FAKEBIN_DIR/pi-signed' --tui-mode regular --model 'openai-codex/gpt-5.6-sol' --thinking 'max' -e" \
     "pi-signed launch did not force the regular TUI with Pi's model, thinking, and extension semantics"
   assert_contains "$launch" "fm-operational-input.sh' encode launch-brief" \
     "pi-signed launch lost the canonical typed launch-brief envelope"
@@ -715,7 +774,7 @@ test_pi_tui_mode_probe_is_safe_for_old_and_new_pi() {
       launch=$(cat "$LAUNCH_LOG")
       assert_contains "$launch" "'$FAKEBIN_DIR/$harness'" \
         "$harness $version launch must use the executable selected for probing"
-      assert_not_contains "$launch" "FM_PI_HARNESS=$harness $harness" \
+      assert_not_contains "$launch" "FM_PI_HARNESS=$harness PI_CLAUDE_CODE_PROVIDER_IDLE_TIMEOUT_MS=1800000 $harness " \
         "$harness $version launch must not re-resolve a bare executable in the worker"
       if [ "$version" = 0.82.0 ]; then
         assert_not_contains "$launch" "--tui-mode" \
@@ -775,7 +834,7 @@ test_pi_signed_persistent_secondmate_uses_pi_extensions_and_identity() {
   assert_absent "$HOME_DIR/data/$id/launch-brief.md" "secondmate launch received a worker overlay"
   launch=$(cat "$LAUNCH_LOG")
   assert_contains "$launch" "< '$sm/data/charter.md'" "secondmate launch lost its original charter"
-  assert_contains "$launch" "FM_PI_HARNESS=pi-signed '$FAKEBIN_DIR/pi-signed' --tui-mode regular -e '$sm/.pi/extensions/fm-primary-turnend-guard.ts' -e '$sm/.pi/extensions/fm-primary-pi-watch.ts'" \
+  assert_contains "$launch" "FM_PI_HARNESS=pi-signed PI_CLAUDE_CODE_PROVIDER_IDLE_TIMEOUT_MS=1800000 '$FAKEBIN_DIR/pi-signed' --tui-mode regular -e '$sm/.pi/extensions/fm-primary-turnend-guard.ts' -e '$sm/.pi/extensions/fm-primary-pi-watch.ts'" \
     "pi-signed secondmate did not force the regular TUI with Pi's primary extension launch shape"
   if [ "${FM_TEST_EVIDENCE:-0}" = 1 ]; then
     printf '# evidence begin: persistent secondmate\n%s\n' "$out"
@@ -1322,6 +1381,8 @@ test_native_effort_validator_keeps_axes_separate
 test_native_pi_ultra_is_explicit_and_model_scoped
 test_batch_preserves_native_ultra
 test_pi_threads_model_and_max_effort
+test_pi_family_launch_sets_fixed_idle_timeout
+test_raw_pi_launch_receives_fixed_idle_timeout
 test_pi_tui_mode_probe_is_safe_for_old_and_new_pi
 test_pi_signed_threads_shared_pi_profile_and_preserves_identity
 test_pi_signed_missing_binary_refuses_before_endpoint_or_metadata
