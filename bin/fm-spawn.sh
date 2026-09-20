@@ -1109,20 +1109,33 @@ trap spawn_abort_cleanup EXIT
 # <session> is required so secondmate and primary spawns serialize against the
 # same session without writing any other home's state directory.
 spawn_herdr_presentation_order_lock_acquire() {
-  local session=${1:-} attempt lock_path
+  local session=${1:-} attempt lock_path max_attempts
   [ -n "$session" ] || session=$(fm_backend_herdr_session)
   lock_path=$(fm_backend_herdr_presentation_session_lock_path "$session") || return 1
   HERDR_PRESENTATION_ORDER_LOCK="$lock_path"
   attempt=0
   # A peer can legitimately hold this lock across the whole `treehouse get`
   # worktree-settle wait below, whose own ceiling is 60s ("did not enter an
-  # isolated worktree within 60s"). This budget (700 * 0.1s = 70s) clears that
-  # bounded wait, so keep the two numbers in sync if either changes. It is not
-  # a ceiling on the hold itself: the held region also runs `git fetch origin`
-  # in freshen_spawn_worktree_base, which is unbounded network work, so a peer
-  # against a slow or stalled remote can still outlast 70s and make a
-  # concurrent waiter refuse. That residual is known and not addressed here.
-  while [ "$attempt" -lt 700 ]; do
+  # isolated worktree within 60s"). fm_backend_herdr_presentation_lock_wait_attempts
+  # (bin/backends/herdr.sh) is the single owner of this budget, shared with the
+  # teardown preflight and pane-kill waiters; its default (700 * 0.1s = 70s)
+  # clears that bounded wait, so keep the two numbers in sync if either
+  # changes. It is not a ceiling on the hold itself: the held region also runs
+  # `git fetch origin` in freshen_spawn_worktree_base, which is unbounded
+  # network work, so a peer against a slow or stalled remote can still outlast
+  # the budget and make a concurrent waiter refuse. That residual is known and
+  # not addressed here.
+  # This same budget also governs the spawn ABORT path (spawn_abort_cleanup's
+  # EXIT-trap reacquire below): a failing or interrupted spawn can therefore
+  # take just as long to exit as a fresh spawn waits to acquire the lock. A
+  # shorter abort-only bound was considered and declined - the abort path
+  # reclaims the same shared lock protecting the same shared layout, so it
+  # needs the same guarantee that a peer's legitimate hold is waited out
+  # rather than treated as contention; a separate, shorter abort budget would
+  # just reintroduce the spurious-refusal problem this change removes, one
+  # level down.
+  max_attempts=$(fm_backend_herdr_presentation_lock_wait_attempts)
+  while [ "$attempt" -lt "$max_attempts" ]; do
     if fm_lock_try_acquire "$HERDR_PRESENTATION_ORDER_LOCK"; then
       HERDR_PRESENTATION_ORDER_LOCK_HELD=1
       return 0

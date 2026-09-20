@@ -2850,7 +2850,8 @@ test_kill_refuses_when_presentation_lock_is_unavailable() {
   for mode in unresolved contended; do
     : > "$dir/cli.log"
     : > "$dir/attempts"
-    out=$(ROOT="$ROOT" MODE="$mode" CLI_LOG="$dir/cli.log" ATTEMPTS="$dir/attempts" bash -c '
+    out=$(ROOT="$ROOT" MODE="$mode" CLI_LOG="$dir/cli.log" ATTEMPTS="$dir/attempts" \
+      FM_BACKEND_HERDR_PRESENTATION_LOCK_WAIT_ATTEMPTS=50 bash -c '
       . "$ROOT/bin/backends/herdr.sh"
       fm_backend_herdr_target_ready() { fm_backend_herdr_parse_target "$1"; }
       fm_backend_herdr_presentation_session_lock_path() {
@@ -2875,12 +2876,52 @@ test_kill_refuses_when_presentation_lock_is_unavailable() {
       "$mode presentation lock refusal did not report the deferred close"
     attempts=$(wc -l < "$dir/attempts" | tr -d ' ')
     if [ "$mode" = contended ]; then
-      [ "$attempts" = 50 ] || fail "contended presentation lock did not use the bounded wait: $attempts attempts"
+      [ "$attempts" = 50 ] || fail "contended presentation lock did not use the injected bounded wait: $attempts attempts"
     else
       [ "$attempts" = 0 ] || fail "unresolved presentation lock path attempted acquisition: $attempts"
     fi
   done
   pass "fm_backend_herdr_kill: unavailable session locks defer every pane close"
+}
+
+test_kill_waits_out_a_peer_hold_past_the_old_five_second_budget() {
+  local dir out status attempts
+  dir="$TMP_ROOT/kill-lock-outlast"; mkdir -p "$dir"
+  : > "$dir/attempts"
+  rm -f "$dir/serialized"
+  # The pre-fix kill waiter stopped after 50 acquire attempts (~5s). A peer
+  # hold that lasts one attempt past that bound must still be waited out by
+  # the unified 700-attempt budget, then the serialized close must run.
+  # This fails on the old per-site 50-attempt literal and passes only when
+  # kill consumes the shared production budget.
+  out=$(ROOT="$ROOT" ATTEMPTS="$dir/attempts" SERIALIZED="$dir/serialized" bash -c '
+      unset FM_BACKEND_HERDR_PRESENTATION_LOCK_WAIT_ATTEMPTS
+      . "$ROOT/bin/backends/herdr.sh"
+      fm_backend_herdr_target_ready() { fm_backend_herdr_parse_target "$1"; }
+      fm_backend_herdr_presentation_session_lock_path() {
+        printf "/tmp/fm-herdr-outlast-test-lock"
+      }
+      acquire_n=0
+      fm_lock_try_acquire() {
+        acquire_n=$((acquire_n + 1))
+        printf "%s\n" "$acquire_n" > "$ATTEMPTS"
+        [ "$acquire_n" -gt 51 ]
+      }
+      fm_lock_release() { return 0; }
+      sleep() { :; }
+      fm_backend_herdr_kill_serialized() { : > "$SERIALIZED"; }
+      fm_backend_herdr_kill fmtest:w2:p2
+    ' 2>&1)
+  status=$?
+  [ "$status" -eq 0 ] || fail "kill that waited out a peer hold changed best-effort status: $status $out"
+  assert_not_contains "$out" "refusing an unlocked pane close" \
+    "kill refused after a hold that outlasts the old 50-attempt budget: $out"
+  [ -e "$dir/serialized" ] \
+    || fail "kill did not proceed to the serialized close after waiting out a peer hold past 50 attempts"
+  attempts=$(tr -d '[:space:]' < "$dir/attempts")
+  [ "$attempts" = 52 ] \
+    || fail "kill did not retry past the old 50-attempt budget before acquiring: $attempts attempts"
+  pass "fm_backend_herdr_kill: waiter outlasts a peer hold past the old 50-attempt budget"
 }
 
 test_endpoint_confirmed_gone_gates_on_structured_presence() {
@@ -3296,6 +3337,29 @@ test_presentation_session_lock_path_is_shared_across_homes() {
       || fail "symlink parent socket paths must resolve one lock: $path_tmp vs $path_private"
   fi
   pass "herdr presentation lock: one path per session/socket across homes"
+}
+
+test_presentation_lock_wait_attempts_ignores_non_positive_overrides() {
+  local got bad
+  got=$(bash -c '
+    unset FM_BACKEND_HERDR_PRESENTATION_LOCK_WAIT_ATTEMPTS
+    . "$0/bin/backends/herdr.sh"
+    fm_backend_herdr_presentation_lock_wait_attempts
+  ' "$ROOT")
+  [ "$got" = 700 ] || fail "production wait budget should be 700 attempts, got $got"
+  got=$(FM_BACKEND_HERDR_PRESENTATION_LOCK_WAIT_ATTEMPTS=3 bash -c '
+    . "$0/bin/backends/herdr.sh"
+    fm_backend_herdr_presentation_lock_wait_attempts
+  ' "$ROOT")
+  [ "$got" = 3 ] || fail "a positive integer test injection should be accepted, got $got"
+  for bad in 0 00 '' abc 50foo -1 1.5; do
+    got=$(FM_BACKEND_HERDR_PRESENTATION_LOCK_WAIT_ATTEMPTS="$bad" bash -c '
+      . "$0/bin/backends/herdr.sh"
+      fm_backend_herdr_presentation_lock_wait_attempts
+    ' "$ROOT")
+    [ "$got" = 700 ] || fail "malformed override '$bad' must fall back to 700, got $got"
+  done
+  pass "presentation lock wait budget ignores non-positive overrides"
 }
 
 test_presentation_session_lock_path_rejects_malformed_socket() {
@@ -5277,6 +5341,7 @@ test_kill_emptying_non_focused_uses_pane_death
 test_kill_focused_workspace_stays_plain_close
 test_endpoint_confirmed_gone_gates_on_structured_presence
 test_kill_refuses_when_presentation_lock_is_unavailable
+test_kill_waits_out_a_peer_hold_past_the_old_five_second_budget
 test_projection_seeded_prune_refuses_active_tab
 test_projection_label_builder_uses_corner_and_strips_owner_prefixes
 test_projection_order_moves_only_exact_new_workspace_and_preserves_relative_order
@@ -5290,6 +5355,7 @@ test_projection_order_anchors_the_parent_by_exact_id
 test_projection_order_foreign_new_child_before_parent_is_read_only
 test_projection_order_missing_parent_is_read_only
 test_presentation_session_lock_path_is_shared_across_homes
+test_presentation_lock_wait_attempts_ignores_non_positive_overrides
 test_presentation_session_lock_path_rejects_malformed_socket
 test_projection_order_rejects_malformed_socket
 test_projection_reclaim_refusal_matrix_is_non_mutating

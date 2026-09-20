@@ -876,6 +876,36 @@ fm_backend_herdr_presentation_session_lock_path() {  # <session>
   printf '%s/order-%s.lock' "$dir" "$key"
 }
 
+# fm_backend_herdr_presentation_lock_wait_attempts: single owner of the
+# shared session-presentation-lock wait budget consumed by every blocking
+# waiter on that lock: bin/fm-spawn.sh's spawn acquire (and its abort-path
+# reacquire, which deliberately reuses this same budget rather than a
+# shorter bound - see the comment at that call site), bin/fm-teardown.sh's
+# preflight acquire, and fm_backend_herdr_kill below. Each attempt sleeps
+# 0.1s, so the production constant of 700 attempts is a 70s budget: a peer
+# can legitimately hold the lock across the whole `treehouse get`
+# worktree-settle wait, whose own ceiling is 60s ("did not enter an
+# isolated worktree within 60s") - keep the two numbers in sync if either
+# changes. Production waiters always consume that constant. Tests may
+# inject a smaller wait through FM_BACKEND_HERDR_PRESENTATION_LOCK_WAIT_ATTEMPTS
+# only when the value is a positive integer; any other value (unset, empty,
+# zero, non-integer) is ignored so a malformed or operator-set override
+# cannot collapse a waiter to a zero-wait refusal.
+fm_backend_herdr_presentation_lock_wait_attempts() {
+  local production=700 override
+  override=${FM_BACKEND_HERDR_PRESENTATION_LOCK_WAIT_ATTEMPTS-}
+  case "$override" in
+    ''|*[!0-9]*) printf '%s' "$production" ;;
+    *)
+      if [ "$override" -gt 0 ] 2>/dev/null; then
+        printf '%s' "$override"
+      else
+        printf '%s' "$production"
+      fi
+      ;;
+  esac
+}
+
 # fm_backend_herdr_projection_focus_snapshot: print the exact active
 # workspace and tab ids as one tab-separated record.
 # Presentation mutations use this read-only snapshot as their sole focus
@@ -3332,13 +3362,14 @@ fm_backend_herdr_kill_serialized() {  # <session> <pane>
 fm_backend_herdr_kill() {  # <target>
   fm_backend_herdr_target_ready "$1" || return 0
   local session=$FM_BACKEND_HERDR_SESSION pane=$FM_BACKEND_HERDR_PANE
-  local lock_path attempt=0 lock_held=0
+  local lock_path attempt=0 lock_held=0 max_attempts
+  max_attempts=$(fm_backend_herdr_presentation_lock_wait_attempts)
   if ! declare -F fm_lock_try_acquire >/dev/null 2>&1; then
     # shellcheck source=bin/fm-wake-lib.sh
     . "$FM_BACKEND_HERDR_ROOT/bin/fm-wake-lib.sh"
   fi
   if lock_path=$(fm_backend_herdr_presentation_session_lock_path "$session"); then
-    while [ "$attempt" -lt 50 ]; do
+    while [ "$attempt" -lt "$max_attempts" ]; do
       if fm_lock_try_acquire "$lock_path"; then
         lock_held=1
         break
