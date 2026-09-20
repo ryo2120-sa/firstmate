@@ -62,15 +62,15 @@ function resolvedDirectory(candidate) {
   return path.resolve(candidate);
 }
 
-// A top-level `cd` whose destination is the primary checkout itself does not
+// A top-level `cd` to the absolute path of the primary checkout itself does not
 // leave the home. Cursor and similar wrappers prefix every shell with that
 // no-op `cd`, and blocking it aborts the tool before any result is returned.
+// A relative destination is never matched: this policy does not know the
+// shell's cwd, so it cannot tell where a relative `cd` would actually land.
 function destinationIsHome(home, destination) {
   if (!home || !destination) return false;
-  if (destination.startsWith("~")) return false;
-  const homeDir = resolvedDirectory(home);
-  const target = path.resolve(homeDir, destination);
-  return resolvedDirectory(target) === homeDir;
+  if (!path.isAbsolute(destination)) return false;
+  return resolvedDirectory(destination) === resolvedDirectory(home);
 }
 
 function cdDestination(position, commandIndex) {

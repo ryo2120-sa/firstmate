@@ -16,7 +16,7 @@ That has actually happened: a persistent top-level `cd` caused a firstmate-owned
 The seatbelt denies exactly that command shape - a cwd change that persists to the primary shell - before it runs.
 
 This guard is not a general sandbox.
-It never evaluates, expands, sources, or runs any byte of the submitted command.
+It never expands, sources, or runs any byte of the submitted command.
 It classifies lexical shell command positions, and may filesystem-resolve a literal `cd` destination (`existsSync`/`realpathSync`) to compare it against the primary checkout path, so a no-op return-to-home `cd` can be allowed.
 Its threat model is agent mistakes, the same as the watcher-arm seatbelt: an accidental bare `cd projects/foo`, not a deliberately obfuscated bypass.
 
@@ -40,13 +40,14 @@ The discriminator is persistence to the parent shell's cwd, not the mere presenc
 
 The guard **blocks** a `cd`, `pushd`, or `popd` builtin that runs in an executed top-level position in the parent shell, because such a command persistently changes the primary shell's own working directory.
 This covers a bare `cd projects/foo`, `cd ..`, `cd`, `cd -`, an absolute `cd` to anywhere other than the primary checkout itself, `pushd <dir>` (including `pushd` of the home), `popd`, a leading-assignment form such as `X=1 cd foo`, quoted or escaped command-word fragments that cook to a bare builtin, and any list form where the builtin runs in the parent shell (`cd x && cmd`, `cmd; cd x`, `cmd || cd x`, `command cd x`, `command -p cd x`, `command -- cd x`, `builtin cd x`, `command builtin cd x`, `cd x >/dev/null`, and newline-separated lists).
-A top-level `cd` whose literal destination resolves to the primary checkout itself is allowed: the parent cwd stays the home, so later firstmate-owned commands cannot leak into a clone.
+An option-carrying `cd` is also blocked even when it names the home (`cd -- <home>`, `cd -P <home>`, `cd -L <home>`), and so is any relative destination (`cd .`, `cd bin/..`): the carve-out below matches only a bare `cd` with an absolute destination.
+A top-level bare `cd` whose literal absolute destination resolves to the primary checkout itself is allowed: the parent cwd stays the home, so later firstmate-owned commands cannot leak into a clone.
 Cursor and similar wrappers prefix every shell with that no-op `cd`; denying it aborts the tool with no completion instead of running the rest of the command.
 
 The guard **allows** everything else, including these safe scoped forms that must never be blocked:
 
 - A command that reaches a target without changing the shell's own cwd: `git -C <dir> ...`, `make -C <dir> ...`, or an absolute path on the command itself.
-- A literal top-level `cd` whose destination resolves to the primary checkout, including Cursor's `cd <home> && ...` prefix and `cd .`.
+- A literal top-level bare `cd` whose absolute destination resolves to the primary checkout, such as Cursor's `cd <home> && ...` prefix.
 - A directory change that does not persist to the parent shell: a subshell `(cd x && ...)`, a `bash -c 'cd ...'` / `sh -c` / `zsh -c` payload, an `env -C <dir> ...`, a `find ... -execdir` runner, a pipeline stage (`cd x | cmd`), or a backgrounded `cd x &`.
 - A `cd` behind a forking or exec'ing wrapper (`env`, `sudo`, `nohup`, `timeout`, `gtimeout`, `exec`), which runs in a child and never persists (and generally just fails, since `cd` is a builtin with no external program).
 - A path-qualified external command named `cd`, `command`, or `builtin`, such as `./cd`, `/usr/bin/cd`, `./command`, `/usr/bin/command`, or `./builtin`, because it runs as a child process and cannot change the parent shell's cwd.
@@ -54,8 +55,10 @@ The guard **allows** everything else, including these safe scoped forms that mus
 - The token `cd` appearing as data: quoted text (`echo "cd projects/foo"`), a comment, a substring of another word (`cdk`, `abcd`, `record`), a `printf` payload, or any later argument word.
 
 An absolute-path `cd` that would leave the home is blocked on purpose: the ALLOW carve-out for absolute paths is for commands that address a target by absolute path without relocating the shell.
-A literal `cd` whose destination is the primary checkout is the one exception, because it is a no-op persist rather than a relocation.
+A bare literal `cd` whose absolute destination is the primary checkout is the one exception, because it is a no-op persist rather than a relocation.
 `pushd` and `popd` stay blocked even when the destination is the home, because they still mutate the directory stack.
+A `cd` carrying any option word stays blocked for the same reason: the word after `cd` is read as the destination, so anything starting with `-` (including `--`, `-P`, and `-L`) is not a destination the carve-out recognizes.
+A relative destination stays blocked because the policy is not told the shell's cwd, so it cannot know where a relative `cd` would land; only an absolute path names the home unambiguously.
 
 ### Accepted non-goals
 

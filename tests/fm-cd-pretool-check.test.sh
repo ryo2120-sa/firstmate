@@ -106,6 +106,8 @@ matrix_case B26 deny 'command -p cd projects/foo'
 matrix_case B27 deny 'command -- cd projects/foo'
 matrix_case B28 deny "cd $PRIMARY && cd projects/foo"
 matrix_case B29 deny "pushd $PRIMARY"
+matrix_case B30 deny 'cd .'
+matrix_case B31 deny "cd -- $PRIMARY"
 
 # ALLOW: not a persistent top-level cwd change (scoped, data, or non-cd).
 matrix_case A01 allow 'git -C projects/foo status'
@@ -146,7 +148,6 @@ matrix_case A35 allow 'command -pv cd'
 matrix_case A36 allow 'command -vp cd'
 matrix_case A37 allow "cd $PRIMARY"
 matrix_case A38 allow "cd $PRIMARY && git status"
-matrix_case A39 allow "cd ."
 
 MATRIX_TMP=$(mktemp -d "${TMPDIR:-/tmp}/fm-cd-policy-matrix.XXXXXX")
 FM_TEST_CLEANUP_DIRS+=("$MATRIX_TMP")
