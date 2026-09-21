@@ -17,6 +17,7 @@ Calm hides collapsed thinking labels, mid-turn assistant working notes, the shel
 A mid-turn working note is assistant text in a message the model did not end its response with, identified by that message's own `stopReason` of `toolUse`, or of `length` with tool calls present.
 Calm hides that note only when a later message in the same turn has real visible text.
 Replay, lifecycle, and incomplete lines do not count, and neither do empty or tools-only rows, so the last recap stays visible.
+Each user message opens a turn, including a watcher wake, an away-supervisor escalation, and a from-firstmate message, so a reply driven by a background wake leaves the previous turn's last recap visible; a turn-end-guard follow-up instead finishes the turn it interrupted.
 Hiding it removes the narration a model emits alongside its tool calls, while the genuine reply that ends a response stays visible.
 Text that is still streaming is never hidden, because suppressing it would also stop a genuine reply from streaming, so a working note is briefly visible before it collapses behind a later recap.
 The narration is hidden only from the live transcript presentation, and remains in the message, model context, session storage, and `/export` artifacts.
