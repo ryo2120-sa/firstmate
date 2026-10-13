@@ -5979,6 +5979,16 @@ if (mirrored.some((text) => text.includes("[captain]"))) {
 }
 // A typed prompt still reaches the mirror step afterwards.
 await fire("before_agent_start", { prompt: "captain typed this after" }, defaultSessionCtx);
+const typedOffer = dispatch("signal: after typed prompt");
+if (!typedOffer.accepted) throw new Error("the wake after a typed prompt was refused");
+await settle(
+  () => (globalThis.__fmSessions[0].ops ?? []).some((op) =>
+    op.kind === "custom" &&
+    op.message.customType === "fm-main-mirror" &&
+    op.message.content === "[captain] captain typed this after"
+  ),
+  "captain mirror of the typed prompt after promptless runs",
+);
 process.exit(0);
 EOF
   status=$?
