@@ -1,0 +1,36 @@
+Trust project folder?
+/private/var/folders/77/t8yh6phs7rz0xp95vhttk15m0000gn/T/fm-lab.hxSCVf/fixed
+This allows pi to load .pi settings and resources, install missing project packages, and execute project extensions.
+→ 
+Trust
+Trust parent folder (/private/var/folders/77/t8yh6phs7rz0xp95vhttk15m0000gn/T/fm-lab.hxSCVf)
+Trust (this session only)
+Do not trust
+Do not trust (this session only)
+↑↓
+ navigate
+enter
+ select
+escape/ctrl+c
+ cancel
+/private/var/folders/77/t8yh6phs7rz0xp95vhttk15m0000gn/T/fm-lab.hxSCVf/fixed (main)
+0.0%/1.0M (auto)
+                                                                                                                                   opus • medium
+                                                                                                         (pi-claude-code-provider) opus • medium
+Reply with exactly LAB-TYPED-OK and nothing else
+2.4%/1.0M (auto)
+Thinking...
+fm_watch_arm_pi
+watcher: started Pi extension arm child 1; future ordinary re-arms are automatic; call fm_watch_arm_pi again only after a later notification says the cycle is 
+missing, failed, or unhealthy
+↑2 ↓316 R4.6k W31k CH12.9% 3.6%/1.0M (auto)
+                                                                              (pi-claude-code-provider) opus • medium
+ LAB-TYPED                                                                                                                                                      
+ LAB-TYPED-OK                                                                                                                                                   
+↑4 ↓329 R40k W32k CH98.1% 3.6%/1.0M (auto)
+                                                                               (pi-claude-code-provider) opus • medium
+[fm-lab-trigger]
+Automatic extension message: reply with exactly LAB-CUSTOM-OK
+ LAB-CUST                                                                                                                                                       
+ LAB-CUSTOM-OK                                                                                                                                                  
+↑6 ↓344 R76k W32k CH99.2% 3.6%/1.0M (auto)

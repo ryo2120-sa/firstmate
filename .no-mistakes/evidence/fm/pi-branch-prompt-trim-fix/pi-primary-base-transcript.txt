@@ -1,0 +1,47 @@
+Trust project folder?
+/private/var/folders/77/t8yh6phs7rz0xp95vhttk15m0000gn/T/fm-lab.LgU3Ih/base
+This allows pi to load .pi settings and resources, install missing project packages, and execute project extensions.
+→ 
+Trust
+Trust parent folder (/private/var/folders/77/t8yh6phs7rz0xp95vhttk15m0000gn/T/fm-lab.LgU3Ih)
+Trust (this session only)
+Do not trust
+Do not trust (this session only)
+↑↓
+ navigate
+enter
+ select
+escape/ctrl+c
+ cancel
+/private/var/folders/77/t8yh6phs7rz0xp95vhttk15m0000gn/T/fm-lab.LgU3Ih/base (main)
+0.0%/1.0M (auto)
+                                                                                                                                   opus • medium
+                                                                                                         (pi-claude-code-provider) opus • medium
+Reply with exactly LAB-TYPED-OK and nothing else
+2.4%/1.0M (auto)
+Thinking...
+fm_watch_arm_pi
+watcher: started Pi extension arm child 1; future ordinary re-arms are automatic; call fm_watch_arm_pi again only after a later notification says the cycle is 
+missing, failed, or unhealthy
+↑2 ↓395 W36k CH0.0% 3.6%/1.0M (auto)
+                                                                                     (pi-claude-code-provider) opus • medium
+ LAB-TYPED                                                                                                                                                      
+ LAB-TYPED-OK                                                                                                                                                   
+↑4 ↓408 R36k W36k CH98.5% 3.6%/1.0M (auto)
+                                                                               (pi-claude-code-provider) opus • medium
+Extension "/private/var/folders/77/t8yh6phs7rz0xp95vhttk15m0000gn/T/fm-lab.LgU3Ih/base/.pi/extensions/fm-branch-supervision.ts" error: Cannot read properties  
+of undefined (reading 'trim')
+  at /private/var/folders/77/t8yh6phs7rz0xp95vhttk15m0000gn/T/fm-lab.LgU3Ih/base/.pi/extensions/fm-branch-supervision.ts:1686:28
+  at async ExtensionRunner.emitBeforeAgentStart                                                                                                                
+(file:///Users/tuannguyen/.pi/agent/install/releases/1.2.0/node_modules/@earendil-works/pi-coding-agent/dist/bundle/chunks/chunk-TJXZSVTD.js:523:27033)
+  at async AgentSession._prepareRun                                                                                                                            
+(file:///Users/tuannguyen/.pi/agent/install/releases/1.2.0/node_modules/@earendil-works/pi-coding-agent/dist/bundle/chunks/chunk-TJXZSVTD.js:867:3720)
+  at async AgentSession._startRun                                                                                                                              
+(file:///Users/tuannguyen/.pi/agent/install/releases/1.2.0/node_modules/@earendil-works/pi-coding-agent/dist/bundle/chunks/chunk-TJXZSVTD.js:867:2606)
+  at async AgentSession.sendCustomMessage                                                                                                                      
+(file:///Users/tuannguyen/.pi/agent/install/releases/1.2.0/node_modules/@earendil-works/pi-coding-agent/dist/bundle/chunks/chunk-TJXZSVTD.js:876:2285)
+[fm-lab-trigger]
+Automatic extension message: reply with exactly LAB-CUSTOM-OK
+ LAB-CUST                                                                                                                                                       
+ LAB-CUSTOM-OK                                                                                                                                                  
+↑6 ↓423 R71k W37k CH99.2% 3.6%/1.0M (auto)
