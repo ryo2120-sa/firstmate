@@ -5949,6 +5949,55 @@ EOF
   pass "an extension-registered provider resolves in the isolated branch runtime"
 }
 
+test_before_agent_start_without_a_string_prompt_stages_nothing() {
+  local repo home out status
+  repo="$TMP_ROOT/no-prompt-root"
+  home="$TMP_ROOT/no-prompt-home"
+  mkdir -p "$home/state" "$home/config"
+  install_pi_branch_extension_fixture "$repo"
+  PLUGIN="$repo/.pi/extensions/fm-branch-supervision.ts" FM_HOME="$home" FM_ROOT_OVERRIDE="$ROOT" \
+    DRIVER_PRELUDE="$DRIVER_PRELUDE" node --input-type=module > "$TMP_ROOT/node-output" 2>&1 <<'EOF'
+const prelude = process.env.DRIVER_PRELUDE;
+await eval(`(async () => { ${prelude}; globalThis.__t = { fire, dispatch, settle, defaultSessionCtx }; })()`);
+const { fire, dispatch, settle, defaultSessionCtx } = globalThis.__t;
+await fire("session_start", {}, defaultSessionCtx);
+// A run started by sendCustomMessage delivers a custom message and no prompt
+// to before_agent_start; the handler must return cleanly instead of throwing.
+const customMessage = { role: "custom", customType: "fm-test", content: "automatic", display: false, timestamp: 0 };
+for (const payload of [{}, { messageType: "custom", message: customMessage }]) {
+  await fire("before_agent_start", payload, defaultSessionCtx);
+}
+// Nothing was staged as a captain mirror: the next accepted wake delivers no
+// captain-tagged dialog to the branch.
+const offer = dispatch("signal: after promptless run");
+if (!offer.accepted) throw new Error("the wake after a promptless run was refused");
+await settle(() => (globalThis.__fmSessions ?? []).length === 1, "branch session after promptless run");
+const mirrored = (globalThis.__fmSessions[0].ops ?? [])
+  .filter((op) => op.kind === "custom" && op.message.customType === "fm-main-mirror")
+  .map((op) => op.message.content);
+if (mirrored.some((text) => text.includes("[captain]"))) {
+  throw new Error(`a promptless run staged a captain mirror: ${JSON.stringify(mirrored)}`);
+}
+// A typed prompt still reaches the mirror step afterwards.
+await fire("before_agent_start", { prompt: "captain typed this after" }, defaultSessionCtx);
+const typedOffer = dispatch("signal: after typed prompt");
+if (!typedOffer.accepted) throw new Error("the wake after a typed prompt was refused");
+await settle(
+  () => (globalThis.__fmSessions[0].ops ?? []).some((op) =>
+    op.kind === "custom" &&
+    op.message.customType === "fm-main-mirror" &&
+    op.message.content === "[captain] captain typed this after"
+  ),
+  "captain mirror of the typed prompt after promptless runs",
+);
+process.exit(0);
+EOF
+  status=$?
+  out=$(cat "$TMP_ROOT/node-output")
+  expect_code 0 "$status" "before_agent_start must tolerate a run started without a string prompt: $out"
+  pass "Pi: before_agent_start returns cleanly and stages nothing when a run starts without a string prompt"
+}
+
 test_outcomes_tool_call_headers_follow_the_loaded_pi_version
 test_outcomes_tool_uses_stock_execution_and_export_consumers
 test_real_pi_picker_primitives_stay_bounded_and_searchable
@@ -5999,3 +6048,4 @@ test_delivery_keeps_the_event_loop_live_and_ordered
 test_session_replacement_during_delivery_neither_loses_nor_duplicates
 test_store_failure_during_delivery_neither_loses_nor_duplicates
 test_mark_read_failure_keeps_routine_redelivery_and_captain_deduplication
+test_before_agent_start_without_a_string_prompt_stages_nothing
