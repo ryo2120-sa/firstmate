@@ -1681,8 +1681,8 @@ ${context.command}
     // getEntries() here loses the captain request that the next wake may answer.
     // Stage it verbatim and remember the future persisted index for turn_end's
     // duplicate suppression. Operational extension injections are not dialog.
-    // A run started by sendCustomMessage delivers no string prompt; treat it as empty.
-    const prompt = typeof event.prompt === "string" ? event.prompt : "";
+    // A run started by sendCustomMessage carries a custom message, not a prompt.
+    const prompt = "prompt" in event ? event.prompt : "";
     processingOpenedThisRun = queuedProcessingContent !== null && prompt === queuedProcessingContent;
     const trimmed = prompt.trim();
     if (!trimmed || isOperationalUserText(trimmed)) return;

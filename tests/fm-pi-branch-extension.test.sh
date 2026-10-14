@@ -5961,9 +5961,10 @@ const prelude = process.env.DRIVER_PRELUDE;
 await eval(`(async () => { ${prelude}; globalThis.__t = { fire, dispatch, settle, defaultSessionCtx }; })()`);
 const { fire, dispatch, settle, defaultSessionCtx } = globalThis.__t;
 await fire("session_start", {}, defaultSessionCtx);
-// A run started by sendCustomMessage delivers no string prompt to
-// before_agent_start; the handler must return cleanly instead of throwing.
-for (const payload of [{}, { prompt: undefined }, { prompt: null }, { prompt: 42 }]) {
+// A run started by sendCustomMessage delivers a custom message and no prompt
+// to before_agent_start; the handler must return cleanly instead of throwing.
+const customMessage = { role: "custom", customType: "fm-test", content: "automatic", display: false, timestamp: 0 };
+for (const payload of [{}, { messageType: "custom", message: customMessage }]) {
   await fire("before_agent_start", payload, defaultSessionCtx);
 }
 // Nothing was staged as a captain mirror: the next accepted wake delivers no
